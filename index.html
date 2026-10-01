@@ -3,213 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maquipesa - Panel de Control</title>
-
-    <!-- Tailwind CSS para el diseño -->
+    <title>Maquipesa - Login y Gestión</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Lucide Icons para los iconos -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- SDK oficial de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans flex h-screen overflow-hidden">
 
-    <!-- BARRA LATERAL / SIDEBAR -->
-    <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 shadow-lg">
-        <div>
-            <!-- LOGO / NOMBRE -->
-            <div class="flex items-center gap-3 px-2 py-4 border-b border-slate-800">
-                <i data-lucide="wrench" class="w-8 h-8 text-amber-500"></i>
+    <!-- PANTALLA DE LOGIN -->
+    <div id="seccion-login" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-slate-800 tracking-wide">MAQUIPESA</h1>
+                <p class="text-sm text-gray-500">Ingresa tus credenciales para acceder</p>
+            </div>
+
+            <form id="form-login" class="space-y-4">
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">MAQUIPESA</h1>
-                    <p class="text-xs text-slate-400">Sistema ERP / Gestión</p>
+                    <label class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                    <input type="email" id="login-email" required placeholder="admin@maquipesa.com" class="w-full mt-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
                 </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full mt-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                </div>
+
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-lg transition shadow-md">
+                    Iniciar Sesión
+                </button>
+            </form>
+
+            <p id="error-login" class="text-red-500 text-xs mt-3 text-center hidden"></p>
+        </div>
+    </div>
+
+    <!-- PANEL DE ADMINISTRACIÓN -->
+    <div id="app-panel" class="hidden flex w-full h-full">
+
+        <!-- BARRA LATERAL / NAVEGACIÓN -->
+        <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 shadow-lg">
+            <div>
+                <div class="flex items-center gap-3 px-2 py-4 border-b border-slate-800">
+                    <i data-lucide="wrench" class="w-8 h-8 text-amber-500"></i>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-wide">MAQUIPESA</h1>
+                        <p class="text-xs text-slate-400">Sistema ERP / Gestión</p>
+                    </div>
+                </div>
+
+                <nav class="mt-6 space-y-2">
+                    <button onclick="cambiarSeccion('carroserias')" id="nav-carroserias" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 text-amber-400 font-medium transition text-left">
+                        <i data-lucide="truck" class="w-5 h-5"></i>
+                        <span>Carrocerías</span>
+                    </button>
+
+                    <button onclick="cambiarSeccion('clientes')" id="nav-clientes" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition text-left">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                        <span>Clientes</span>
+                    </button>
+                </nav>
             </div>
 
-            <!-- MENÚ DE NAVEGACIÓN -->
-            <nav class="mt-6 space-y-2">
-                <a href="#dashboard" onclick="mostrarSeccion('dashboard')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 text-amber-400 font-medium transition hover:bg-slate-800">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="#carroserias" onclick="mostrarSeccion('carroserias')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="truck" class="w-5 h-5"></i>
-                    <span>Carrocerías</span>
-                </a>
-                <a href="#clientes" onclick="mostrarSeccion('clientes')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="users" class="w-5 h-5"></i>
-                    <span>Clientes</span>
-                </a>
-                <a href="#inventario" onclick="mostrarSeccion('inventario')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="package" class="w-5 h-5"></i>
-                    <span>Inventario</span>
-                </a>
-                <a href="#personal" onclick="mostrarSeccion('personal')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="user-check" class="w-5 h-5"></i>
-                    <span>Personal</span>
-                </a>
-            </nav>
-        </div>
+            <button id="btn-logout" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm transition">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Cerrar Sesión
+            </button>
+        </aside>
 
-        <div class="text-xs text-slate-500 border-t border-slate-800 pt-4 text-center">
-            Maquipesa v1.0
-        </div>
-    </aside>
-
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="flex-1 flex flex-col overflow-y-auto">
-
-        <!-- BARRA SUPERIOR / HEADER -->
-        <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm">
-            <h2 id="titulo-seccion" class="text-2xl font-bold text-slate-800">Panel Principal</h2>
-            <div class="flex items-center gap-3">
-                <span class="text-sm text-gray-500">Bienvenido, <b>Señor Jean</b></span>
-                <div class="w-9 h-9 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold">
-                    J
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm">
+                <h2 id="titulo-vista" class="text-2xl font-bold text-slate-800">Gestión de Carrocerías</h2>
+                <div class="flex items-center gap-3">
+                    <span id="user-email" class="text-sm text-gray-600 font-medium">Cargando...</span>
                 </div>
+            </header>
+
+            <div class="p-8">
+
+                <!-- ================= VISTA 1: CARROCERÍAS ================= -->
+                <div id="vista-carroserias" class="space-y-6">
+
+                    <!-- FORMULARIO CARROSERÍA -->
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i> Registrar Nueva Carrocería
+                        </h3>
+
+                        <form id="form-carrosa" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Modelo Carrosa</label>
+                                <input type="text" id="modelo" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                                <input type="text" id="color" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                                <select id="estado" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                    <option value="Elaboración">Elaboración</option>
+                                    <option value="Revisión">Revisión</option>
+                                    <option value="Terminado">Terminado</option>
+                                    <option value="Entregado">Entregado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Altura (m)</label>
+                                <input type="number" step="0.01" id="altura" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Ancho (m)</label>
+                                <input type="number" step="0.01" id="ancho" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Largo (m)</label>
+                                <input type="number" step="0.01" id="largo" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div class="md:col-span-3 text-right">
+                                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-2.5 rounded-lg transition shadow-md">
+                                    Guardar Carrocería
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TABLA CARROSERÍAS -->
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Lista de Carrocerías</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
+                                        <th class="p-3">ID</th>
+                                        <th class="p-3">Modelo</th>
+                                        <th class="p-3">Medidas (A x A x L)</th>
+                                        <th class="p-3">Color</th>
+                                        <th class="p-3">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-carrosas" class="divide-y divide-gray-100 text-sm">
+                                    <tr>
+                                        <td colspan="5" class="p-4 text-center text-gray-400">Cargando datos...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ================= VISTA 2: CLIENTES ================= -->
+                <div id="vista-clientes" class="hidden space-y-6">
+
+                    <!-- FORMULARIO CLIENTE -->
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="user-plus" class="w-5 h-5 text-amber-500"></i> Registrar Nuevo Cliente
+                        </h3>
+
+                        <form id="form-cliente" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Razón Social / Nombre Comercial</label>
+                                <input type="text" id="razon-social" required placeholder="Ej: Transportes SAC" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ID Persona (Referencia)</label>
+                                <input type="number" id="id-persona" required placeholder="1" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div class="md:col-span-2 text-right">
+                                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-2.5 rounded-lg transition shadow-md">
+                                    Guardar Cliente
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TABLA CLIENTES -->
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Lista de Clientes</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
+                                        <th class="p-3">ID Cliente</th>
+                                        <th class="p-3">Razón Social</th>
+                                        <th class="p-3">Fecha Registro</th>
+                                        <th class="p-3">Compras Totales</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-clientes" class="divide-y divide-gray-100 text-sm">
+                                    <tr>
+                                        <td colspan="4" class="p-4 text-center text-gray-400">Cargando datos de clientes...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
-        </header>
-
-        <!-- ÁREA DINÁMICA DE CONTENIDO -->
-        <div class="p-8">
-
-            <!-- TARJETAS DE MÉTRICAS (DASHBOARD) -->
-            <section id="sec-dashboard" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-
-                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-                        <div class="p-3 bg-amber-100 text-amber-600 rounded-lg">
-                            <i data-lucide="truck" class="w-6 h-6"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Carrocerías en Proceso</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="cant-proceso">0</h3>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-                        <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg">
-                            <i data-lucide="check-circle" class="w-6 h-6"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Terminadas / Entregadas</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="cant-terminadas">0</h3>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-                        <div class="p-3 bg-blue-100 text-blue-600 rounded-lg">
-                            <i data-lucide="users" class="w-6 h-6"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Clientes Registrados</p>
-                            <h3 class="text-2xl font-bold text-gray-800" id="cant-clientes">0</h3>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-                        <div class="p-3 bg-purple-100 text-purple-600 rounded-lg">
-                            <i data-lucide="box" class="w-6 h-6"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Stock Equipos/Materiales</p>
-                            <h3 class="text-2xl font-bold text-gray-800">OK</h3>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- FORMULARIO DE REGISTRO RÁPIDO -->
-                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <i data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i> Registrar Nueva Carrocería
-                    </h3>
-
-                    <form id="form-carrosa" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Modelo Carrosa</label>
-                            <input type="text" id="modelo" placeholder="Ej: Carrocería Furgón 10T" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                            <input type="text" id="color" placeholder="Ej: Blanco / Rojo" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                            <select id="estado" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                                <option value="Elaboración">Elaboración</option>
-                                <option value="Revisión">Revisión</option>
-                                <option value="Terminado">Terminado</option>
-                                <option value="Entregado">Entregado</option>
-                                <option value="Mantenimiento">Mantenimiento</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Altura (m)</label>
-                            <input type="number" step="0.01" id="altura" placeholder="2.40" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Ancho (m)</label>
-                            <input type="number" step="0.01" id="ancho" placeholder="2.20" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Largo (m)</label>
-                            <input type="number" step="0.01" id="largo" placeholder="6.50" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        </div>
-
-                        <div class="md:col-span-3 text-right">
-                            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-2.5 rounded-lg transition shadow-md">
-                                Guardar en Supabase
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- TABLA DE CARROCERÍAS REGISTRADAS -->
-                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Lista de Carrocerías</h3>
-
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase">
-                                    <th class="p-3">ID</th>
-                                    <th class="p-3">Modelo</th>
-                                    <th class="p-3">Medidas (A x A x L)</th>
-                                    <th class="p-3">Color</th>
-                                    <th class="p-3">Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-carrosas" class="divide-y divide-gray-100 text-sm">
-                                <tr>
-                                    <td colspan="5" class="p-4 text-center text-gray-400">Cargando datos desde Supabase...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </section>
-
-        </div>
-    </main>
+        </main>
+    </div>
 
     <script src="script.js"></script>
-    <script>
-        // Inicializar iconos de Lucide
-        lucide.createIcons();
-
-        // Navegación básica entre secciones
-        function mostrarSeccion(seccion) {
-            document.getElementById('titulo-seccion').innerText = seccion.toUpperCase();
-        }
-    </script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>
