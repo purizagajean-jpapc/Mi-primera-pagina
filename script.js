@@ -300,7 +300,7 @@ document.getElementById('form-empleado')?.addEventListener('submit', async (e) =
 // CONSULTAS TABLAS SUPABASE (Tablas en minúscula)
 // ==========================================
 async function cargarCarrosas() {
-    cargarTabla('carroceria', 'tabla-carrosas', ['modelocarrosa', 'color', 'estado']);
+    cargarTabla('carrosa', 'tabla-carrosa', ['modelocarrosa', 'color', 'estado']);
 }
 
 async function cargarClientes() {
