@@ -10,43 +10,41 @@ const btnLogout = document.getElementById('btn-logout');
 const errorLogin = document.getElementById('error-login');
 const userEmailDisplay = document.getElementById('user-email');
 
-// CONTROL DE NAVEGACIÓN ENTRE VISTAS
 function cambiarSeccion(seccion) {
-    const vistaCarroserias = document.getElementById('vista-carroserias');
-    const vistaClientes = document.getElementById('vista-clientes');
-    const navCarroserias = document.getElementById('nav-carroserias');
-    const navClientes = document.getElementById('nav-clientes');
-    const tituloVista = document.getElementById('titulo-vista');
+    const secciones = ['carroserias', 'clientes', 'empleados', 'equipos', 'sedes'];
+    const titulos = {
+        carroserias: 'Gestión de Carrocerías',
+        clientes: 'Gestión de Clientes',
+        empleados: 'Gestión de Empleados',
+        equipos: 'Herramientas y Equipos',
+        sedes: 'Gestión de Sedes'
+    };
 
-    if (seccion === 'carroserias') {
-        vistaCarroserias.classList.remove('hidden');
-        vistaClientes.classList.add('hidden');
+    secciones.forEach(s => {
+        const vista = document.getElementById(`vista-${s}`);
+        const nav = document.getElementById(`nav-${s}`);
+        if (s === seccion) {
+            vista.classList.remove('hidden');
+            nav.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 text-amber-400 font-medium transition text-left";
+        } else {
+            vista.classList.add('hidden');
+            nav.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition text-left";
+        }
+    });
 
-        navCarroserias.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 text-amber-400 font-medium transition text-left";
-        navClientes.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition text-left";
+    document.getElementById('titulo-vista').innerText = titulos[seccion];
 
-        tituloVista.innerText = "Gestión de Carrocerías";
-        cargarCarrosas();
-    } else if (seccion === 'clientes') {
-        vistaCarroserias.classList.add('hidden');
-        vistaClientes.classList.remove('hidden');
-
-        navClientes.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800 text-amber-400 font-medium transition text-left";
-        navCarroserias.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition text-left";
-
-        tituloVista.innerText = "Gestión de Clientes";
-        cargarClientes();
-    }
+    if (seccion === 'carroserias') cargarCarrosas();
+    if (seccion === 'clientes') cargarClientes();
+    if (seccion === 'empleados') cargarTabla('Empleado', 'tabla-empleados', ['Cargo']);
+    if (seccion === 'equipos') cargarTabla('Equipos', 'tabla-equipos', ['Nombre', 'Marca', 'Modelo', 'Estado']);
+    if (seccion === 'sedes') cargarTabla('Sede', 'tabla-sedes', ['NombreSede', 'Direccion', 'Ciudad']);
 }
 
-// VERIFICAR SESIÓN
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabaseClient.auth.getSession();
     evaluarSesion(session);
-
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
-        evaluarSesion(session);
-    });
+    supabaseClient.auth.onAuthStateChange((_event, session) => evaluarSesion(session));
 });
 
 function evaluarSesion(session) {
@@ -54,27 +52,21 @@ function evaluarSesion(session) {
         seccionLogin.classList.add('hidden');
         appPanel.classList.remove('hidden');
         userEmailDisplay.innerText = session.user.email;
-        cargarCarrosas();
+        cambiarSeccion('carroserias');
     } else {
         seccionLogin.classList.remove('hidden');
         appPanel.classList.add('hidden');
     }
 }
 
-// INICIAR SESIÓN
 if (formLogin) {
     formLogin.addEventListener('submit', async (e) => {
         e.preventDefault();
         errorLogin.classList.add('hidden');
-
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
 
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-            email: email,
-            password: password
-        });
-
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
             errorLogin.innerText = 'Error: ' + error.message;
             errorLogin.classList.remove('hidden');
@@ -82,126 +74,36 @@ if (formLogin) {
     });
 }
 
-// CERRAR SESIÓN
 if (btnLogout) {
-    btnLogout.addEventListener('click', async () => {
-        await supabaseClient.auth.signOut();
-    });
-}
-
-// --- MÓDULO CARROCERÍAS ---
-const formCarrosa = document.getElementById('form-carrosa');
-if (formCarrosa) {
-    formCarrosa.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const nuevaCarrosa = {
-            ModeloCarrosa: document.getElementById('modelo').value,
-            Color: document.getElementById('color').value,
-            Estado: document.getElementById('estado').value,
-            Altura: parseFloat(document.getElementById('altura').value),
-            Ancho: parseFloat(document.getElementById('ancho').value),
-            Largo: parseFloat(document.getElementById('largo').value)
-        };
-
-        const { data, error } = await supabaseClient
-            .from('Carrosa')
-            .insert([nuevaCarrosa]);
-
-        if (error) {
-            alert('Error guardando en Supabase: ' + error.message);
-        } else {
-            alert('¡Carrocería registrada!');
-            formCarrosa.reset();
-            cargarCarrosas();
-        }
-    });
+    btnLogout.addEventListener('click', async () => await supabaseClient.auth.signOut());
 }
 
 async function cargarCarrosas() {
-    const tbody = document.getElementById('tabla-carrosas');
-    if (!tbody) return;
-
-    const { data, error } = await supabaseClient
-        .from('Carrosa')
-        .select('*');
-
-    if (error) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Error: ${error.message}</td></tr>`;
-        return;
-    }
-
-    if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-400">No hay registros guardados.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = data.map(c => `
-    <tr class="hover:bg-gray-50">
-      <td class="p-3 font-medium text-slate-700">#${c.IdCarrosa || c.id}</td>
-      <td class="p-3 font-semibold text-slate-800">${c.ModeloCarrosa}</td>
-      <td class="p-3 text-slate-600">${c.Altura}m x ${c.Ancho}m x ${c.Largo}m</td>
-      <td class="p-3 text-slate-600">${c.Color}</td>
-      <td class="p-3">
-        <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">
-          ${c.Estado}
-        </span>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// --- MÓDULO CLIENTES ---
-const formCliente = document.getElementById('form-cliente');
-if (formCliente) {
-    formCliente.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const nuevoCliente = {
-            RazonSocial: document.getElementById('razon-social').value,
-            IdPersona: parseInt(document.getElementById('id-persona').value),
-            FechaRegistro: new Date().toISOString().split('T')[0],
-            ComprasTotales: 0
-        };
-
-        const { data, error } = await supabaseClient
-            .from('Cliente')
-            .insert([nuevoCliente]);
-
-        if (error) {
-            alert('Error guardando cliente: ' + error.message);
-        } else {
-            alert('¡Cliente registrado correctamente!');
-            formCliente.reset();
-            cargarClientes();
-        }
-    });
+    cargarTabla('Carrosa', 'tabla-carrosas', ['ModeloCarrosa', 'Color', 'Estado']);
 }
 
 async function cargarClientes() {
-    const tbody = document.getElementById('tabla-clientes');
+    cargarTabla('Cliente', 'tabla-clientes', ['RazonSocial', 'FechaRegistro']);
+}
+
+async function cargarTabla(tabla, elementId, campos) {
+    const tbody = document.getElementById(elementId);
     if (!tbody) return;
 
-    const { data, error } = await supabaseClient
-        .from('Cliente')
-        .select('*');
-
+    const { data, error } = await supabaseClient.from(tabla).select('*');
     if (error) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500">Error: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td class="p-4 text-red-500">Error: ${error.message}</td></tr>`;
         return;
     }
-
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">No hay clientes registrados aún.</td></tr>`;
+        tbody.innerHTML = `<tr><td class="p-4 text-gray-400">Sin registros guardados.</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = data.map(cli => `
-    <tr class="hover:bg-gray-50">
-      <td class="p-3 font-medium text-slate-700">#${cli.IdCliente || cli.id}</td>
-      <td class="p-3 font-semibold text-slate-800">${cli.RazonSocial}</td>
-      <td class="p-3 text-slate-600">${cli.FechaRegistro || 'N/A'}</td>
-      <td class="p-3 text-slate-600">${cli.ComprasTotales || 0}</td>
+    tbody.innerHTML = data.map(item => `
+    <tr class="border-b">
+      <td class="p-2 font-bold">#${item.id || item[`Id${tabla}`] || ''}</td>
+      ${campos.map(c => `<td class="p-2">${item[c] || '-'}</td>`).join('')}
     </tr>
   `).join('');
 }
