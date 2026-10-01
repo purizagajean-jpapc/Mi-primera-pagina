@@ -214,8 +214,27 @@
             </button>
         </form>
     </div>
+    <!-- Cargar SDK de Firebase Database -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script>
+        // Tu configuración de Firebase (asegúrate de usar las mismas llaves de tu proyecto)
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY",
+            authDomain: "TU_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://TU_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "TU_PROJECT_ID",
+            storageBucket: "TU_PROJECT_ID.appspot.com",
+            messagingSenderId: "TU_SENDER_ID",
+            appId: "TU_APP_ID"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const database = firebase.database();
+
         lucide.createIcons();
 
         function toggleChat() {
@@ -238,18 +257,28 @@
             const mensajeUsuario = input.value.trim();
             if (!mensajeUsuario) return;
 
+            // Mostrar mensaje del usuario en la pantalla
             const msgUserDiv = document.createElement('div');
             msgUserDiv.className = 'bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-sm';
             msgUserDiv.innerText = mensajeUsuario;
             chatMensajes.appendChild(msgUserDiv);
 
+            // GUARDAR EN FIREBASE DATABASE
+            database.ref('mensajes_clientes').push({
+                mensaje: mensajeUsuario,
+                fecha: new Date().toLocaleString(),
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                estado: 'Pendiente'
+            });
+
             input.value = '';
             chatMensajes.scrollTop = chatMensajes.scrollHeight;
 
+            // Respuesta automática
             setTimeout(() => {
                 const msgBotDiv = document.createElement('div');
                 msgBotDiv.className = 'bg-amber-100 text-slate-900 p-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm font-medium';
-                msgBotDiv.innerText = '¡Gracias por escribirnos! Un asesor de ventas revisará tu mensaje y se pondrá en contacto contigo pronto.';
+                msgBotDiv.innerText = '¡Gracias por escribirnos! Tu consulta ha sido registrada en nuestro sistema y un asesor se comunicará contigo a la brevedad.';
                 chatMensajes.appendChild(msgBotDiv);
                 chatMensajes.scrollTop = chatMensajes.scrollHeight;
             }, 1000);
