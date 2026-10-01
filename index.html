@@ -214,20 +214,22 @@
             </button>
         </form>
     </div>
-    <!-- Cargar SDK de Firebase Database -->
+
+    <!-- SDKs de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script>
-        // Tu configuración de Firebase (asegúrate de usar las mismas llaves de tu proyecto)
+        // Configuración de Firebase con credenciales de Maquipesa
         const firebaseConfig = {
-            apiKey: "TU_API_KEY",
-            authDomain: "TU_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://TU_PROJECT_ID-default-rtdb.firebaseio.com",
-            projectId: "TU_PROJECT_ID",
-            storageBucket: "TU_PROJECT_ID.appspot.com",
-            messagingSenderId: "TU_SENDER_ID",
-            appId: "TU_APP_ID"
+            apiKey: "AIzaSyB8ZV-Hc2sao7IAMQLC76381Yp1RQn91nk",
+            authDomain: "maquipesa-c48e8.firebaseapp.com",
+            databaseURL: "https://maquipesa-c48e8-default-rtdb.firebaseio.com",
+            projectId: "maquipesa-c48e8",
+            storageBucket: "maquipesa-c48e8.firebasestorage.app",
+            messagingSenderId: "693639252413",
+            appId: "1:693639252413:web:794c08a1519210092faad4",
+            measurementId: "G-7YGLMED9XN"
         };
 
         if (!firebase.apps.length) {
@@ -257,13 +259,13 @@
             const mensajeUsuario = input.value.trim();
             if (!mensajeUsuario) return;
 
-            // Mostrar mensaje del usuario en la pantalla
+            // Mostrar mensaje del usuario en pantalla
             const msgUserDiv = document.createElement('div');
             msgUserDiv.className = 'bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-sm';
             msgUserDiv.innerText = mensajeUsuario;
             chatMensajes.appendChild(msgUserDiv);
 
-            // GUARDAR EN FIREBASE DATABASE
+            // Guardar en Firebase Database
             database.ref('mensajes_clientes').push({
                 mensaje: mensajeUsuario,
                 fecha: new Date().toLocaleString(),
@@ -274,7 +276,7 @@
             input.value = '';
             chatMensajes.scrollTop = chatMensajes.scrollHeight;
 
-            // Respuesta automática
+            // Respuesta automática al usuario
             setTimeout(() => {
                 const msgBotDiv = document.createElement('div');
                 msgBotDiv.className = 'bg-amber-100 text-slate-900 p-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm font-medium';

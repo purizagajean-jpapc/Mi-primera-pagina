@@ -6,15 +6,16 @@ const SUPABASE_ANON_KEY = 'sb_publishable_6955vcPni5-FAdtdwht8Gg_Xeb0qBtg';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// REEMPLAZE ESTOS VALORES CON SUS CREDENCIALES DE FIREBASE
+// REEMPLAZA ESTOS VALORES CON TUS CREDENCIALES REALES DE FIREBASE
 const firebaseConfig = {
-    apiKey: "TU_API_KEY",
-    authDomain: "TU_PROJECT_ID.firebaseapp.com",
-    databaseURL: "https://TU_PROJECT_ID-default-rtdb.firebaseio.com",
-    projectId: "TU_PROJECT_ID",
-    storageBucket: "TU_PROJECT_ID.appspot.com",
-    messagingSenderId: "TU_SENDER_ID",
-    appId: "TU_APP_ID"
+    apiKey: "AIzaSyB8ZV-Hc2sao7IAMQLC76381Yp1RQn91nk",
+    authDomain: "maquipesa-c48e8.firebaseapp.com",
+    databaseURL: "https://maquipesa-c48e8-default-rtdb.firebaseio.com",
+    projectId: "maquipesa-c48e8",
+    storageBucket: "maquipesa-c48e8.firebasestorage.app",
+    messagingSenderId: "693639252413",
+    appId: "1:693639252413:web:794c08a1519210092faad4",
+    measurementId: "G-7YGLMED9XN"
 };
 
 // Inicializar Firebase
@@ -66,8 +67,8 @@ function cambiarSeccion(seccion) {
     if (seccion === 'carroserias') cargarCarrosas();
     if (seccion === 'clientes') cargarClientes();
     if (seccion === 'empleados') cargarEmpleados();
-    if (seccion === 'equipos') cargarTabla('Equipos', 'tabla-equipos', ['Nombre', 'Marca', 'Modelo', 'Estado']);
-    if (seccion === 'sedes') cargarTabla('Sede', 'tabla-sedes', ['NombreSede', 'Direccion', 'Ciudad', 'Pais']);
+    if (seccion === 'equipos') cargarTabla('equipos', 'tabla-equipos', ['nombre', 'marca', 'modelo', 'estado']);
+    if (seccion === 'sedes') cargarTabla('sede', 'tabla-sedes', ['nombresede', 'direccion', 'ciudad', 'pais']);
 }
 
 window.cambiarSeccion = cambiarSeccion;
@@ -118,22 +119,22 @@ if (btnLogout) {
 }
 
 // ==========================================
-// FORMULARIOS SUPABASE
+// FORMULARIOS SUPABASE (Tablas en minúscula)
 // ==========================================
 
 // 1. CARROCERÍA
 document.getElementById('form-carrosa')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const datos = {
-        ModeloCarrosa: document.getElementById('car-modelo').value,
-        Altura: parseFloat(document.getElementById('car-altura').value),
-        Ancho: parseFloat(document.getElementById('car-ancho').value),
-        Largo: parseFloat(document.getElementById('car-largo').value),
-        Color: document.getElementById('car-color').value,
-        Estado: document.getElementById('car-estado').value
+        modelocarrosa: document.getElementById('car-modelo').value,
+        altura: parseFloat(document.getElementById('car-altura').value),
+        ancho: parseFloat(document.getElementById('car-ancho').value),
+        largo: parseFloat(document.getElementById('car-largo').value),
+        color: document.getElementById('car-color').value,
+        estado: document.getElementById('car-estado').value
     };
 
-    const { error } = await supabaseClient.from('Carrosa').insert([datos]);
+    const { error } = await supabaseClient.from('carrosa').insert([datos]);
     if (error) alert('Error guardando carrocería: ' + error.message);
     else {
         e.target.reset();
@@ -145,12 +146,12 @@ document.getElementById('form-carrosa')?.addEventListener('submit', async (e) =>
 document.getElementById('form-cliente')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const datos = {
-        RazonSocial: document.getElementById('cli-razonsocial').value,
-        ComprasTotales: parseInt(document.getElementById('cli-comprastotales').value) || 0,
-        FechaRegistro: document.getElementById('cli-fecharegistro').value
+        razonsocial: document.getElementById('cli-razonsocial').value,
+        comprastotales: parseInt(document.getElementById('cli-comprastotales').value) || 0,
+        fecharegistro: document.getElementById('cli-fecharegistro').value
     };
 
-    const { error } = await supabaseClient.from('Cliente').insert([datos]);
+    const { error } = await supabaseClient.from('cliente').insert([datos]);
     if (error) alert('Error guardando cliente: ' + error.message);
     else {
         e.target.reset();
@@ -162,15 +163,15 @@ document.getElementById('form-cliente')?.addEventListener('submit', async (e) =>
 document.getElementById('form-sede')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const datos = {
-        NombreSede: document.getElementById('sd-nombre').value,
-        Direccion: document.getElementById('sd-direccion').value,
-        Ciudad: document.getElementById('sd-ciudad').value,
-        Pais: document.getElementById('sd-pais').value,
-        Telefono: document.getElementById('sd-telefono').value || null,
-        Estado: true
+        nombresede: document.getElementById('sd-nombre').value,
+        direccion: document.getElementById('sd-direccion').value,
+        ciudad: document.getElementById('sd-ciudad').value,
+        pais: document.getElementById('sd-pais').value,
+        telefono: document.getElementById('sd-telefono').value || null,
+        estado: true
     };
 
-    const { error } = await supabaseClient.from('Sede').insert([datos]);
+    const { error } = await supabaseClient.from('sede').insert([datos]);
     if (error) alert('Error guardando sede: ' + error.message);
     else {
         e.target.reset();
@@ -182,14 +183,14 @@ document.getElementById('form-sede')?.addEventListener('submit', async (e) => {
 document.getElementById('form-equipo')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const datos = {
-        Nombre: document.getElementById('eq-nombre').value,
-        Marca: document.getElementById('eq-marca').value,
-        Modelo: document.getElementById('eq-modelo').value,
-        AnioAdquisicion: parseInt(document.getElementById('eq-anio').value),
-        Estado: document.getElementById('eq-estado').value
+        nombre: document.getElementById('eq-nombre').value,
+        marca: document.getElementById('eq-marca').value,
+        modelo: document.getElementById('eq-modelo').value,
+        anioadquisicion: parseInt(document.getElementById('eq-anio').value),
+        estado: document.getElementById('eq-estado').value
     };
 
-    const { error } = await supabaseClient.from('Equipos').insert([datos]);
+    const { error } = await supabaseClient.from('equipos').insert([datos]);
     if (error) alert('Error guardando equipo: ' + error.message);
     else {
         e.target.reset();
@@ -201,30 +202,30 @@ document.getElementById('form-equipo')?.addEventListener('submit', async (e) => 
 document.getElementById('form-empleado')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const personaDatos = {
-        Documento: document.getElementById('per-documento').value,
-        NombreLegal: document.getElementById('per-nombre').value,
-        ApellidoPaterno: document.getElementById('per-paterno').value,
-        ApellidoMaterno: document.getElementById('per-materno').value,
-        FechaDeNacimiento: document.getElementById('per-nacimiento').value,
-        Pais: document.getElementById('per-pais').value,
-        Ciudad: document.getElementById('per-ciudad').value,
-        Direccion: document.getElementById('per-direccion').value
+        documento: document.getElementById('per-documento').value,
+        nombrelegal: document.getElementById('per-nombre').value,
+        apellidopaterno: document.getElementById('per-paterno').value,
+        apellidomaterno: document.getElementById('per-materno').value,
+        fechadenacimiento: document.getElementById('per-nacimiento').value,
+        pais: document.getElementById('per-pais').value,
+        ciudad: document.getElementById('per-ciudad').value,
+        direccion: document.getElementById('per-direccion').value
     };
 
-    const { data: personaData, error: personaError } = await supabaseClient.from('Persona').insert([personaDatos]).select();
+    const { data: personaData, error: personaError } = await supabaseClient.from('persona').insert([personaDatos]).select();
 
     if (personaError) {
         alert('Error guardando persona: ' + personaError.message);
         return;
     }
 
-    const idPersona = personaData[0].IdPersona;
+    const idPersona = personaData[0].idpersona;
     const empleadoDatos = {
-        Cargo: document.getElementById('emp-cargo').value,
-        IdPersona: idPersona
+        cargo: document.getElementById('emp-cargo').value,
+        idpersona: idPersona
     };
 
-    const { error: empError } = await supabaseClient.from('Empleado').insert([empleadoDatos]);
+    const { error: empError } = await supabaseClient.from('empleado').insert([empleadoDatos]);
     if (empError) alert('Error guardando empleado: ' + empError.message);
     else {
         e.target.reset();
@@ -233,14 +234,14 @@ document.getElementById('form-empleado')?.addEventListener('submit', async (e) =
 });
 
 // ==========================================
-// CONSULTAS TABLAS SUPABASE
+// CONSULTAS TABLAS SUPABASE (Tablas en minúscula)
 // ==========================================
 async function cargarCarrosas() {
-    cargarTabla('Carrosa', 'tabla-carrosas', ['ModeloCarrosa', 'Color', 'Estado']);
+    cargarTabla('carrosa', 'tabla-carrosas', ['modelocarrosa', 'color', 'estado']);
 }
 
 async function cargarClientes() {
-    cargarTabla('Cliente', 'tabla-clientes', ['RazonSocial', 'FechaRegistro']);
+    cargarTabla('cliente', 'tabla-clientes', ['razonsocial', 'fecharegistro']);
 }
 
 async function cargarEmpleados() {
@@ -248,8 +249,8 @@ async function cargarEmpleados() {
     if (!tbody) return;
 
     const { data, error } = await supabaseClient
-        .from('Empleado')
-        .select('IdEmpleado, Cargo, Persona(NombreLegal, ApellidoPaterno, ApellidoMaterno, Documento)');
+        .from('empleado')
+        .select('idempleado, cargo, persona(nombrelegal, apellidopaterno, apellidomaterno, documento)');
 
     if (error) {
         tbody.innerHTML = `<tr><td class="p-4 text-red-500">Error: ${error.message}</td></tr>`;
@@ -261,14 +262,14 @@ async function cargarEmpleados() {
     }
 
     tbody.innerHTML = data.map(item => {
-        const p = item.Persona || {};
-        const nombreCompleto = `${p.NombreLegal || ''} ${p.ApellidoPaterno || ''} ${p.ApellidoMaterno || ''}`.trim() || '-';
+        const p = item.persona || {};
+        const nombreCompleto = `${p.nombrelegal || ''} ${p.apellidopaterno || ''} ${p.apellidomaterno || ''}`.trim() || '-';
         return `
             <tr class="border-b">
-                <td class="p-2 font-bold">#${item.IdEmpleado}</td>
+                <td class="p-2 font-bold">#${item.idempleado}</td>
                 <td class="p-2">${nombreCompleto}</td>
-                <td class="p-2">${p.Documento || '-'}</td>
-                <td class="p-2">${item.Cargo || '-'}</td>
+                <td class="p-2">${p.documento || '-'}</td>
+                <td class="p-2">${item.cargo || '-'}</td>
             </tr>
         `;
     }).join('');
@@ -290,7 +291,7 @@ async function cargarTabla(tabla, elementId, campos) {
 
     tbody.innerHTML = data.map(item => `
         <tr class="border-b">
-            <td class="p-2 font-bold">#${item.id || item[`Id${tabla}`] || ''}</td>
+            <td class="p-2 font-bold">#${item.id || item[`id${tabla}`] || item[`id_${tabla}`] || ''}</td>
             ${campos.map(c => `<td class="p-2">${item[c] || '-'}</td>`).join('')}
         </tr>
     `).join('');
