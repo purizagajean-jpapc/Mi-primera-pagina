@@ -38,13 +38,17 @@ function cambiarSeccion(seccion) {
     if (seccion === 'clientes') cargarClientes();
     if (seccion === 'empleados') cargarTabla('Empleado', 'tabla-empleados', ['Cargo']);
     if (seccion === 'equipos') cargarTabla('Equipos', 'tabla-equipos', ['Nombre', 'Marca', 'Modelo', 'Estado']);
-    if (seccion === 'sedes') cargarTabla('Sede', 'tabla-sedes', ['NombreSede', 'Direccion', 'Ciudad']);
+    if (seccion === 'sedes') cargarTabla('Sede', 'tabla-sedes', ['NombreSede', 'Direccion', 'Ciudad', 'Pais']);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabaseClient.auth.getSession();
     evaluarSesion(session);
     supabaseClient.auth.onAuthStateChange((_event, session) => evaluarSesion(session));
+
+    // Asignar fecha de hoy por defecto
+    const hoy = new Date().toISOString().split('T')[0];
+    if (document.getElementById('cli-fecharegistro')) document.getElementById('cli-fecharegistro').value = hoy;
 });
 
 function evaluarSesion(session) {
@@ -77,6 +81,117 @@ if (formLogin) {
 if (btnLogout) {
     btnLogout.addEventListener('click', async () => await supabaseClient.auth.signOut());
 }
+
+// 1. CARROCERÍA
+document.getElementById('form-carrosa')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const datos = {
+        ModeloCarrosa: document.getElementById('car-modelo').value,
+        Altura: parseFloat(document.getElementById('car-altura').value),
+        Ancho: parseFloat(document.getElementById('car-ancho').value),
+        Largo: parseFloat(document.getElementById('car-largo').value),
+        Color: document.getElementById('car-color').value,
+        Estado: document.getElementById('car-estado').value
+    };
+
+    const { error } = await supabaseClient.from('Carrosa').insert([datos]);
+    if (error) alert('Error guardando carrocería: ' + error.message);
+    else {
+        e.target.reset();
+        cargarCarrosas();
+    }
+});
+
+// 2. CLIENTE
+document.getElementById('form-cliente')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const datos = {
+        RazonSocial: document.getElementById('cli-razonsocial').value,
+        ComprasTotales: parseInt(document.getElementById('cli-comprastotales').value) || 0,
+        FechaRegistro: document.getElementById('cli-fecharegistro').value
+    };
+
+    const { error } = await supabaseClient.from('Cliente').insert([datos]);
+    if (error) alert('Error guardando cliente: ' + error.message);
+    else {
+        e.target.reset();
+        cargarClientes();
+    }
+});
+
+// 3. SEDE
+document.getElementById('form-sede')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const datos = {
+        NombreSede: document.getElementById('sd-nombre').value,
+        Direccion: document.getElementById('sd-direccion').value,
+        Ciudad: document.getElementById('sd-ciudad').value,
+        Pais: document.getElementById('sd-pais').value,
+        Telefono: document.getElementById('sd-telefono').value || null,
+        Estado: true
+    };
+
+    const { error } = await supabaseClient.from('Sede').insert([datos]);
+    if (error) alert('Error guardando sede: ' + error.message);
+    else {
+        e.target.reset();
+        cambiarSeccion('sedes');
+    }
+});
+
+// 4. EQUIPOS / HERRAMIENTAS
+document.getElementById('form-equipo')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const datos = {
+        Nombre: document.getElementById('eq-nombre').value,
+        Marca: document.getElementById('eq-marca').value,
+        Modelo: document.getElementById('eq-modelo').value,
+        AnioAdquisicion: parseInt(document.getElementById('eq-anio').value),
+        Estado: document.getElementById('eq-estado').value
+    };
+
+    const { error } = await supabaseClient.from('Equipos').insert([datos]);
+    if (error) alert('Error guardando equipo: ' + error.message);
+    else {
+        e.target.reset();
+        cambiarSeccion('equipos');
+    }
+});
+
+// 5. EMPLEADO
+document.getElementById('form-empleado')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const personaDatos = {
+        Documento: document.getElementById('per-documento').value,
+        NombreLegal: document.getElementById('per-nombre').value,
+        ApellidoPaterno: document.getElementById('per-paterno').value,
+        ApellidoMaterno: document.getElementById('per-materno').value,
+        FechaDeNacimiento: document.getElementById('per-nacimiento').value,
+        Pais: document.getElementById('per-pais').value,
+        Ciudad: document.getElementById('per-ciudad').value,
+        Direccion: document.getElementById('per-direccion').value
+    };
+
+    const { data: personaData, error: personaError } = await supabaseClient.from('Persona').insert([personaDatos]).select();
+
+    if (personaError) {
+        alert('Error guardando datos personales: ' + personaError.message);
+        return;
+    }
+
+    const idPersona = personaData[0].IdPersona;
+    const empleadoDatos = {
+        Cargo: document.getElementById('emp-cargo').value,
+        IdPersona: idPersona
+    };
+
+    const { error: empError } = await supabaseClient.from('Empleado').insert([empleadoDatos]);
+    if (empError) alert('Error guardando empleado: ' + empError.message);
+    else {
+        e.target.reset();
+        cambiarSeccion('empleados');
+    }
+});
 
 async function cargarCarrosas() {
     cargarTabla('Carrosa', 'tabla-carrosas', ['ModeloCarrosa', 'Color', 'Estado']);

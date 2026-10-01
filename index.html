@@ -38,7 +38,7 @@
     <!-- PANEL PRINCIPAL -->
     <div id="app-panel" class="hidden flex w-full h-full">
 
-        <!-- BARRA LATERAL CON TODAS LAS TABLAS -->
+        <!-- BARRA LATERAL -->
         <aside class="w-64 bg-slate-900 text-white flex flex-col justify-between p-4 shadow-lg overflow-y-auto">
             <div>
                 <div class="flex items-center gap-3 px-2 py-4 border-b border-slate-800">
@@ -82,26 +82,27 @@
 
             <div class="p-8">
 
-                <!-- VISTA CARROCERÍAS -->
+                <!-- CARROCERÍAS -->
                 <div id="vista-carroserias" class="space-y-6">
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i> Nueva Carrocería</h3>
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i> Registrar Nueva Carrocería</h3>
                         <form id="form-carrosa" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div><label class="block text-sm font-medium">Modelo</label><input type="text" id="modelo" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">Color</label><input type="text" id="color" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Modelo Carrosa *</label><input type="text" id="car-modelo" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Altura (m) *</label><input type="number" step="0.01" id="car-altura" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Ancho (m) *</label><input type="number" step="0.01" id="car-ancho" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Largo (m) *</label><input type="number" step="0.01" id="car-largo" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Color *</label><input type="text" id="car-color" required class="w-full p-2 border rounded-lg"></div>
                             <div>
-                                <label class="block text-sm font-medium">Estado</label>
-                                <select id="estado" class="w-full p-2 border rounded-lg">
+                                <label class="block text-sm font-medium">Estado *</label>
+                                <select id="car-estado" class="w-full p-2 border rounded-lg">
                                     <option value="Elaboración">Elaboración</option>
                                     <option value="Revisión">Revisión</option>
                                     <option value="Terminado">Terminado</option>
+                                    <option value="Mantenimiento">Mantenimiento</option>
                                     <option value="Entregado">Entregado</option>
                                 </select>
                             </div>
-                            <div><label class="block text-sm font-medium">Altura (m)</label><input type="number" step="0.01" id="altura" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">Ancho (m)</label><input type="number" step="0.01" id="ancho" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">Largo (m)</label><input type="number" step="0.01" id="largo" required class="w-full p-2 border rounded-lg"></div>
-                            <div class="md:col-span-3 text-right"><button type="submit" class="bg-amber-500 text-white px-6 py-2 rounded-lg font-semibold">Guardar</button></div>
+                            <div class="md:col-span-3 text-right"><button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg font-semibold">Guardar Carrocería</button></div>
                         </form>
                     </div>
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -110,13 +111,15 @@
                     </div>
                 </div>
 
-                <!-- VISTA CLIENTES -->
+                <!-- CLIENTES -->
                 <div id="vista-clientes" class="hidden space-y-6">
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold mb-4">Nuevo Cliente</h3>
+                        <h3 class="text-lg font-bold mb-4">Registrar Nuevo Cliente</h3>
                         <form id="form-cliente" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Razón Social</label><input type="text" id="razon-social" required class="w-full p-2 border rounded-lg"></div>
-                            <div class="md:col-span-2 text-right"><button type="submit" class="bg-amber-500 text-white px-6 py-2 rounded-lg font-semibold">Guardar Cliente</button></div>
+                            <div><label class="block text-sm font-medium">Razón Social *</label><input type="text" id="cli-razonsocial" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Compras Totales</label><input type="number" id="cli-comprastotales" value="0" class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Fecha Registro *</label><input type="date" id="cli-fecharegistro" required class="w-full p-2 border rounded-lg"></div>
+                            <div class="md:col-span-2 text-right"><button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg font-semibold">Guardar Cliente</button></div>
                         </form>
                     </div>
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -125,13 +128,21 @@
                     </div>
                 </div>
 
-                <!-- VISTA EMPLEADOS -->
+                <!-- EMPLEADOS -->
                 <div id="vista-empleados" class="hidden space-y-6">
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold mb-4">Nuevo Empleado</h3>
-                        <form id="form-empleado" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Cargo</label><input type="text" id="emp-cargo" required placeholder="Ej: Soldador / Técnico" class="w-full p-2 border rounded-lg"></div>
-                            <div class="md:col-span-2 text-right"><button type="submit" class="bg-amber-500 text-white px-6 py-2 rounded-lg font-semibold">Guardar Empleado</button></div>
+                        <h3 class="text-lg font-bold mb-4">Registrar Nuevo Empleado (Persona + Empleado)</h3>
+                        <form id="form-empleado" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-medium">Cargo *</label><input type="text" id="emp-cargo" required placeholder="Ej. Técnico Soldador" class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Documento (DNI) *</label><input type="text" maxlength="10" id="per-documento" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Nombre Legal *</label><input type="text" id="per-nombre" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Apellido Paterno *</label><input type="text" id="per-paterno" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Apellido Materno *</label><input type="text" id="per-materno" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Fecha Nacimiento *</label><input type="date" id="per-nacimiento" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">País *</label><input type="text" id="per-pais" value="Perú" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Ciudad *</label><input type="text" id="per-ciudad" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Dirección *</label><input type="text" id="per-direccion" required class="w-full p-2 border rounded-lg"></div>
+                            <div class="md:col-span-3 text-right"><button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg font-semibold">Guardar Empleado</button></div>
                         </form>
                     </div>
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -140,24 +151,24 @@
                     </div>
                 </div>
 
-                <!-- VISTA HERRAMIENTAS / EQUIPOS -->
+                <!-- HERRAMIENTAS Y EQUIPOS -->
                 <div id="vista-equipos" class="hidden space-y-6">
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold mb-4">Nuevo Equipo / Herramienta</h3>
+                        <h3 class="text-lg font-bold mb-4">Registrar Nuevo Equipo / Herramienta</h3>
                         <form id="form-equipo" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div><label class="block text-sm font-medium">Nombre</label><input type="text" id="eq-nombre" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">Marca</label><input type="text" id="eq-marca" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">Modelo</label><input type="text" id="eq-modelo" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">Año Adquisición</label><input type="number" id="eq-anio" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Nombre *</label><input type="text" id="eq-nombre" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Marca *</label><input type="text" id="eq-marca" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Modelo *</label><input type="text" id="eq-modelo" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Año Adquisición *</label><input type="number" id="eq-anio" required class="w-full p-2 border rounded-lg"></div>
                             <div>
-                                <label class="block text-sm font-medium">Estado</label>
+                                <label class="block text-sm font-medium">Estado *</label>
                                 <select id="eq-estado" class="w-full p-2 border rounded-lg">
                                     <option value="Operativo">Operativo</option>
                                     <option value="Mantenimiento">Mantenimiento</option>
                                     <option value="Malogrado">Malogrado</option>
                                 </select>
                             </div>
-                            <div class="md:col-span-3 text-right"><button type="submit" class="bg-amber-500 text-white px-6 py-2 rounded-lg font-semibold">Guardar Equipo</button></div>
+                            <div class="md:col-span-3 text-right"><button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg font-semibold">Guardar Equipo</button></div>
                         </form>
                     </div>
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -166,16 +177,17 @@
                     </div>
                 </div>
 
-                <!-- VISTA SEDES -->
+                <!-- SEDES -->
                 <div id="vista-sedes" class="hidden space-y-6">
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold mb-4">Nueva Sede</h3>
+                        <h3 class="text-lg font-bold mb-4">Registrar Nueva Sede</h3>
                         <form id="form-sede" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">Nombre Sede</label><input type="text" id="sd-nombre" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">Dirección</label><input type="text" id="sd-direccion" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">Ciudad</label><input type="text" id="sd-ciudad" required class="w-full p-2 border rounded-lg"></div>
-                            <div><label class="block text-sm font-medium">País</label><input type="text" id="sd-pais" value="Perú" required class="w-full p-2 border rounded-lg"></div>
-                            <div class="md:col-span-2 text-right"><button type="submit" class="bg-amber-500 text-white px-6 py-2 rounded-lg font-semibold">Guardar Sede</button></div>
+                            <div><label class="block text-sm font-medium">Nombre Sede *</label><input type="text" id="sd-nombre" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Dirección *</label><input type="text" id="sd-direccion" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Ciudad *</label><input type="text" id="sd-ciudad" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">País *</label><input type="text" id="sd-pais" value="Perú" required class="w-full p-2 border rounded-lg"></div>
+                            <div><label class="block text-sm font-medium">Teléfono</label><input type="text" maxlength="12" id="sd-telefono" class="w-full p-2 border rounded-lg"></div>
+                            <div class="md:col-span-2 text-right"><button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg font-semibold">Guardar Sede</button></div>
                         </form>
                     </div>
                     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
