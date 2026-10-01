@@ -300,7 +300,7 @@ document.getElementById('form-empleado')?.addEventListener('submit', async (e) =
 // CONSULTAS TABLAS SUPABASE (Tablas en minúscula)
 // ==========================================
 async function cargarCarrosas() {
-    cargarTabla('carrosa', 'tabla-carrosa', ['modelocarrosa', 'color', 'estado']);
+    cargarTabla('carroceria', 'tabla-carrosas', ['modelocarrosa', 'color', 'estado']);
 }
 
 async function cargarClientes() {
@@ -358,69 +358,4 @@ async function cargarTabla(tabla, elementId, campos) {
             ${campos.map(c => `<td class="p-2">${item[c] || '-'}</td>`).join('')}
         </tr>
     `).join('');
-}
-
-// ==========================================
-// MÓDULO CHAT WEB (FIREBASE)
-// ==========================================
-if (typeof firebase !== 'undefined') {
-    const dbChat = firebase.database();
-
-    dbChat.ref('mensajes_clientes').on('value', (snapshot) => {
-        const listaContainer = document.getElementById('lista-mensajes');
-        const contador = document.getElementById('contador-mensajes');
-        if (!listaContainer) return;
-
-        listaContainer.innerHTML = '';
-
-        if (!snapshot.exists()) {
-            listaContainer.innerHTML = '<p class="text-gray-500 text-sm">No hay consultas o cotizaciones pendientes.</p>';
-            if (contador) contador.innerText = '0 Mensajes';
-            return;
-        }
-
-        let total = 0;
-        snapshot.forEach((childSnapshot) => {
-            total++;
-            const data = childSnapshot.val();
-            const id = childSnapshot.key;
-
-            const tarjetaMsg = document.createElement('div');
-            tarjetaMsg.className = 'bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm';
-            tarjetaMsg.innerHTML = `
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${data.estado === 'Atendido' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-amber-100 text-amber-700 border border-amber-300'}">
-                            ${data.estado || 'Pendiente'}
-                        </span>
-                        <span class="text-xs text-gray-400">${data.fecha || ''}</span>
-                    </div>
-                    <p class="text-sm text-gray-800 font-medium">${data.mensaje}</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    ${data.estado !== 'Atendido' ? `
-                        <button onclick="marcarAtendido('${id}')" class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg transition">
-                            Marcar Atendido
-                        </button>
-                    ` : ''}
-                    <button onclick="eliminarMensaje('${id}')" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg transition">
-                        Eliminar
-                    </button>
-                </div>
-            `;
-            listaContainer.prepend(tarjetaMsg);
-        });
-
-        if (contador) contador.innerText = `${total} Mensajes`;
-    });
-
-    window.marcarAtendido = function (id) {
-        dbChat.ref('mensajes_clientes/' + id).update({ estado: 'Atendido' });
-    };
-
-    window.eliminarMensaje = function (id) {
-        if (confirm('¿Deseas eliminar este registro de consulta?')) {
-            dbChat.ref('mensajes_clientes/' + id).remove();
-        }
-    };
 }
