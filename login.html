@@ -6,10 +6,24 @@
   <title>Acceso al Sistema ERP - MAQUIPESA</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.4s ease forwards; }
+  </style>
 </head>
 <body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-6">
 
-  <div class="w-full max-w-md bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 space-y-6">
+  <!-- LOADING OVERLAY -->
+  <div id="loading-overlay" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-50">
+    <div class="flex flex-col items-center gap-4">
+      <div class="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      <p class="text-slate-400 text-sm">Verificando sesión...</p>
+    </div>
+  </div>
+
+  <!-- FORMULARIO -->
+  <div class="fade-in w-full max-w-md bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 space-y-6 hidden" id="login-card">
     <div class="text-center space-y-2">
       <div class="inline-flex bg-amber-500 p-3 rounded-xl text-slate-900 mb-2">
         <i data-lucide="truck" class="w-8 h-8"></i>
@@ -18,37 +32,134 @@
       <p class="text-slate-400 text-sm">Ingrese sus credenciales para acceder al panel de control</p>
     </div>
 
-    <form onsubmit="iniciarSesion(event)" class="space-y-4">
+    <form id="form-login" class="space-y-4">
+      <!-- Email -->
       <div>
-        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Correo Electrónico</label>
-        <input type="email" required placeholder="admin@maquipesa.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          Correo Electrónico
+        </label>
+        <div class="relative">
+          <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+          <input
+            type="email" id="login-email" required
+            placeholder="admin@maquipesa.com"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white
+                   focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition placeholder-slate-500"
+          >
+        </div>
       </div>
 
+      <!-- Contraseña -->
       <div>
-        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Contraseña</label>
-        <input type="password" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          Contraseña
+        </label>
+        <div class="relative">
+          <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+          <input
+            type="password" id="login-password" required
+            placeholder="••••••••"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-12 py-3 text-sm text-white
+                   focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition placeholder-slate-500"
+          >
+          <button type="button" id="toggle-password" onclick="togglePassword()"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition">
+            <i data-lucide="eye" class="w-4 h-4" id="eye-icon"></i>
+          </button>
+        </div>
       </div>
 
-      <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3.5 rounded-xl transition shadow-lg text-sm flex items-center justify-center gap-2">
-        <i data-lucide="log-in" class="w-4 h-4"></i> Iniciar Sesión
+      <!-- Error message -->
+      <div id="error-msg" class="hidden bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-3 rounded-xl flex items-start gap-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+        <span id="error-text"></span>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" id="btn-submit"
+        class="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed
+               text-slate-900 font-bold py-3.5 rounded-xl transition shadow-lg text-sm flex items-center justify-center gap-2">
+        <span id="btn-icon"><i data-lucide="log-in" class="w-4 h-4"></i></span>
+        <span id="btn-text">Iniciar Sesión</span>
       </button>
     </form>
 
-    <div class="text-center pt-2">
+    <div class="text-center pt-2 border-t border-slate-700">
       <a href="index.html" class="text-xs text-slate-400 hover:text-amber-400 transition inline-flex items-center gap-1">
-        ← Volver a la página comercial
+        <i data-lucide="arrow-left" class="w-3 h-3"></i> Volver a la página comercial
       </a>
     </div>
   </div>
 
   <script>
+    const SUPABASE_URL  = 'https://wfarydtyxqsvbkmevtwx.supabase.co';
+    const SUPABASE_ANON = 'sb_publishable_6955vcPni5-FAdtdwht8Gg_Xeb0qBtg';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // ─── Inicializar íconos ───────────────────────────────────
     lucide.createIcons();
 
-    function iniciarSesion(e) {
-      e.preventDefault();
-      // Redirige al dashboard tras iniciar sesión
-      window.location.href = 'dashboard.html';
+    // ─── Verificar sesión activa ──────────────────────────────
+    (async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        window.location.href = 'dashboard.html';
+        return;
+      }
+      // Mostrar formulario
+      document.getElementById('loading-overlay').classList.add('hidden');
+      document.getElementById('login-card').classList.remove('hidden');
+      lucide.createIcons();
+    })();
+
+    // ─── Toggle contraseña ────────────────────────────────────
+    function togglePassword() {
+      const input = document.getElementById('login-password');
+      const icon  = document.getElementById('eye-icon');
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      icon.setAttribute('data-lucide', isHidden ? 'eye-off' : 'eye');
+      lucide.createIcons();
     }
+
+    // ─── Manejo del formulario ────────────────────────────────
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email    = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorMsg = document.getElementById('error-msg');
+      const errorTxt = document.getElementById('error-text');
+      const btnText  = document.getElementById('btn-text');
+      const btnIcon  = document.getElementById('btn-icon');
+      const btnSub   = document.getElementById('btn-submit');
+
+      // Estado de carga
+      errorMsg.classList.add('hidden');
+      btnText.textContent = 'Ingresando...';
+      btnIcon.innerHTML   = '<div class="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>';
+      btnSub.disabled     = true;
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        // Mostrar error en UI
+        const msg = error.message === 'Invalid login credentials'
+          ? 'Correo o contraseña incorrectos. Verifique sus datos.'
+          : error.message;
+        errorTxt.textContent = msg;
+        errorMsg.classList.remove('hidden');
+        lucide.createIcons();
+
+        // Restaurar botón
+        btnText.textContent = 'Iniciar Sesión';
+        btnIcon.innerHTML   = '<i data-lucide="log-in" class="w-4 h-4"></i>';
+        btnSub.disabled     = false;
+        lucide.createIcons();
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    });
   </script>
 </body>
 </html>
