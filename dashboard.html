@@ -96,13 +96,17 @@
             <button onclick="cambiarSeccion('carroserias')" id="nav-carroserias" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
                 <i data-lucide="truck" class="w-5 h-5 flex-shrink-0"></i><span>Carrocerías</span>
             </button>
-            <button onclick="cambiarSeccion('mensajes')" id="nav-mensajes" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
-                <i data-lucide="message-square" class="w-5 h-5 flex-shrink-0"></i>
-                <span>Mensajes Web</span>
-                <span id="badge-mensajes" class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
+            <button onclick="cambiarSeccion('carros')" id="nav-carros" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
+                <i data-lucide="car" class="w-5 h-5 flex-shrink-0"></i><span>Vehículos (Carros)</span>
+            </button>
+            <button onclick="cambiarSeccion('productos')" id="nav-productos" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
+                <i data-lucide="package" class="w-5 h-5 flex-shrink-0"></i><span>Productos / Stock</span>
             </button>
             <button onclick="cambiarSeccion('clientes')" id="nav-clientes" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
                 <i data-lucide="users" class="w-5 h-5 flex-shrink-0"></i><span>Clientes</span>
+            </button>
+            <button onclick="cambiarSeccion('proveedores')" id="nav-proveedores" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
+                <i data-lucide="briefcase" class="w-5 h-5 flex-shrink-0"></i><span>Proveedores</span>
             </button>
             <button onclick="cambiarSeccion('empleados')" id="nav-empleados" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
                 <i data-lucide="user-check" class="w-5 h-5 flex-shrink-0"></i><span>Empleados</span>
@@ -110,8 +114,19 @@
             <button onclick="cambiarSeccion('equipos')" id="nav-equipos" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
                 <i data-lucide="hammer" class="w-5 h-5 flex-shrink-0"></i><span>Herramientas / Equipos</span>
             </button>
+            <button onclick="cambiarSeccion('mantenimientos')" id="nav-mantenimientos" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
+                <i data-lucide="settings" class="w-5 h-5 flex-shrink-0"></i><span>Mantenimientos</span>
+            </button>
             <button onclick="cambiarSeccion('sedes')" id="nav-sedes" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
                 <i data-lucide="building-2" class="w-5 h-5 flex-shrink-0"></i><span>Sedes</span>
+            </button>
+            <button onclick="cambiarSeccion('finanzas')" id="nav-finanzas" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
+                <i data-lucide="badge-dollar-sign" class="w-5 h-5 flex-shrink-0"></i><span>Finanzas & Pagos</span>
+            </button>
+            <button onclick="cambiarSeccion('mensajes')" id="nav-mensajes" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition text-left text-sm">
+                <i data-lucide="message-square" class="w-5 h-5 flex-shrink-0"></i>
+                <span>Mensajes Web</span>
+                <span id="badge-mensajes" class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
             </button>
         </nav>
 
@@ -520,6 +535,419 @@
                 </div>
             </div>
 
+            <!-- ══════════════════════════════════════════════
+                 SECCIÓN: VEHÍCULOS / CARROS
+            ═══════════════════════════════════════════════ -->
+            <div id="vista-carros" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-gray-700 mb-5 flex items-center gap-2 uppercase tracking-wide">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-amber-500"></i> Registrar Nuevo Vehículo (Carro)
+                    </h3>
+                    <form id="form-carro" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Placa *</label>
+                            <input type="text" id="carro-placa" required placeholder="Ej. ABC-123" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Categoría *</label>
+                            <input type="text" id="carro-categoria" required placeholder="Ej. N3, M2" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Modelo *</label>
+                            <input type="text" id="carro-modelo" required placeholder="Ej. Canter, Hino 500" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Color *</label>
+                            <input type="text" id="carro-color" required class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Año Fabricación *</label>
+                            <input type="text" id="carro-aniofab" required placeholder="2022" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Año Modelo *</label>
+                            <input type="text" id="carro-aniomod" required placeholder="2023" class="form-input">
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-3">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Cliente Asignado</label>
+                            <select id="carro-idcliente" class="form-input">
+                                <option value="">-- Sin Cliente Asignado --</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-3 flex justify-end">
+                            <button type="submit" class="btn-primary">
+                                <i data-lucide="save" class="w-4 h-4"></i> Guardar Vehículo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-gray-800 text-sm">Lista de Vehículos</h3>
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input type="text" id="search-carros" placeholder="Buscar..." oninput="filtrarYRenderizar('carros')" class="search-input">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-400 uppercase text-xs border-b border-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold w-12">#</th>
+                                    <th class="px-4 py-3 font-semibold">Placa</th>
+                                    <th class="px-4 py-3 font-semibold">Modelo</th>
+                                    <th class="px-4 py-3 font-semibold">Categoría</th>
+                                    <th class="px-4 py-3 font-semibold">Color</th>
+                                    <th class="px-4 py-3 font-semibold">Año Fab/Mod</th>
+                                    <th class="px-4 py-3 font-semibold">Cliente</th>
+                                    <th class="px-4 py-3 font-semibold text-center w-24">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-carros"></tbody>
+                        </table>
+                    </div>
+                    <div id="pag-carros" class="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400 min-h-[56px]"></div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════
+                 SECCIÓN: PRODUCTOS (CON PLANCHA Y TUBO)
+            ═══════════════════════════════════════════════ -->
+            <div id="vista-productos" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-gray-700 mb-5 flex items-center gap-2 uppercase tracking-wide">
+                        <i data-lucide="package-plus" class="w-4 h-4 text-amber-500"></i> Registrar Nuevo Producto
+                    </h3>
+                    <form id="form-producto" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Nombre de Producto *</label>
+                                <input type="text" id="prod-nombre" required placeholder="Ej. Plancha Estructural LAF, Tubo LAC" class="form-input">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Stock General</label>
+                                <input type="number" id="prod-stock" min="0" value="0" class="form-input">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Sede</label>
+                                <select id="prod-idsede" class="form-input">
+                                    <option value="">-- Sin sede asignada --</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-3">
+                                <label class="block text-xs font-semibold text-amber-600 uppercase mb-1.5 font-bold">
+                                    ★ Tipo Específico de Producto (Desplegable)
+                                </label>
+                                <select id="prod-subtipo" onchange="toggleSubtipoFields(this.value)" class="form-input border-amber-300 bg-amber-50/30">
+                                    <option value="general">Producto Estándar / General</option>
+                                    <option value="plancha">Plancha (Medidas y espesor)</option>
+                                    <option value="tubo">Tubo (Dimensiones y tipo de perfil)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Campos dinámicos condicionales para PLANCHA -->
+                        <div id="fields-plancha" class="hidden p-4 rounded-xl border border-amber-200 bg-amber-50/40 space-y-3">
+                            <h4 class="text-xs font-bold text-amber-800 uppercase flex items-center gap-2">
+                                <i data-lucide="layers" class="w-4 h-4 text-amber-600"></i> Atributos Específicos de Plancha
+                            </h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Alto (cm)</label>
+                                    <input type="number" step="0.01" id="pla-alto" placeholder="Ej. 240.00" class="form-input">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Ancho (cm)</label>
+                                    <input type="number" step="0.01" id="pla-ancho" placeholder="Ej. 120.00" class="form-input">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Grosor (mm)</label>
+                                    <input type="number" step="0.01" id="pla-grosor" placeholder="Ej. 3.00" class="form-input">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Tipo / Material *</label>
+                                    <input type="text" id="pla-tipo" placeholder="Ej. LAF, LAC, Galvanizada" class="form-input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos dinámicos condicionales para TUBO -->
+                        <div id="fields-tubo" class="hidden p-4 rounded-xl border border-blue-200 bg-blue-50/40 space-y-3">
+                            <h4 class="text-xs font-bold text-blue-800 uppercase flex items-center gap-2">
+                                <i data-lucide="cylinder" class="w-4 h-4 text-blue-600"></i> Atributos Específicos de Tubo
+                            </h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Longitud / Alto (m)</label>
+                                    <input type="number" step="0.01" id="tub-alto" placeholder="Ej. 6.00" class="form-input">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Grosor (mm)</label>
+                                    <input type="number" step="0.01" id="tub-grosor" placeholder="Ej. 2.50" class="form-input">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1.5">Tipo / Perfil</label>
+                                    <select id="tub-tipo" class="form-input">
+                                        <option value="Circular">Circular</option>
+                                        <option value="Cuadrada">Cuadrada</option>
+                                        <option value="Rectangular">Rectangular</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" class="btn-primary">
+                                <i data-lucide="save" class="w-4 h-4"></i> Guardar Producto
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-gray-800 text-sm">Inventario de Productos</h3>
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input type="text" id="search-productos" placeholder="Buscar..." oninput="filtrarYRenderizar('productos')" class="search-input">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-400 uppercase text-xs border-b border-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold w-12">#</th>
+                                    <th class="px-4 py-3 font-semibold">Producto</th>
+                                    <th class="px-4 py-3 font-semibold">Categoría / Tipo</th>
+                                    <th class="px-4 py-3 font-semibold">Detalles Técnicos</th>
+                                    <th class="px-4 py-3 font-semibold">Stock</th>
+                                    <th class="px-4 py-3 font-semibold text-center w-24">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-productos"></tbody>
+                        </table>
+                    </div>
+                    <div id="pag-productos" class="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400 min-h-[56px]"></div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════
+                 SECCIÓN: PROVEEDORES
+            ═══════════════════════════════════════════════ -->
+            <div id="vista-proveedores" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-gray-700 mb-5 flex items-center gap-2 uppercase tracking-wide">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-amber-500"></i> Registrar Nuevo Proveedor
+                    </h3>
+                    <form id="form-proveedor" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Razón Social *</label>
+                            <input type="text" id="prov-razon" required class="form-input">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Nombre Comercial *</label>
+                            <input type="text" id="prov-nombre" required class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Identificación Fiscal (RUC) *</label>
+                            <input type="text" id="prov-ruc" required class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Tipo Proveedor *</label>
+                            <input type="text" id="prov-tipo" required placeholder="Acero, Pinturas, Ferretería" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Teléfono Contacto</label>
+                            <input type="text" id="prov-tel" placeholder="987654321" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Correo Contacto</label>
+                            <input type="email" id="prov-correo" placeholder="contacto@empresa.com" class="form-input">
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-4 flex justify-end">
+                            <button type="submit" class="btn-primary">
+                                <i data-lucide="save" class="w-4 h-4"></i> Guardar Proveedor
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-gray-800 text-sm">Lista de Proveedores</h3>
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input type="text" id="search-proveedores" placeholder="Buscar..." oninput="filtrarYRenderizar('proveedores')" class="search-input">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-400 uppercase text-xs border-b border-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold w-12">#</th>
+                                    <th class="px-4 py-3 font-semibold">Razón Social</th>
+                                    <th class="px-4 py-3 font-semibold">Nombre Comercial</th>
+                                    <th class="px-4 py-3 font-semibold">RUC</th>
+                                    <th class="px-4 py-3 font-semibold">Tipo</th>
+                                    <th class="px-4 py-3 font-semibold">Contacto</th>
+                                    <th class="px-4 py-3 font-semibold text-center w-24">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-proveedores"></tbody>
+                        </table>
+                    </div>
+                    <div id="pag-proveedores" class="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400 min-h-[56px]"></div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════
+                 SECCIÓN: MANTENIMIENTOS
+            ═══════════════════════════════════════════════ -->
+            <div id="vista-mantenimientos" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-gray-700 mb-5 flex items-center gap-2 uppercase tracking-wide">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-amber-500"></i> Registrar Orden de Mantenimiento
+                    </h3>
+                    <form id="form-mantenimiento" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Equipo *</label>
+                            <select id="mant-idequipo" required class="form-input"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Tipo Mantenimiento *</label>
+                            <select id="mant-tipo" required class="form-input">
+                                <option value="Preventivo">Preventivo</option>
+                                <option value="Correctivo">Correctivo</option>
+                                <option value="Calibración">Calibración</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Costo (S/)</label>
+                            <input type="number" step="0.01" id="mant-costo" placeholder="0.00" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Fecha Inicio *</label>
+                            <input type="date" id="mant-fechainicio" required class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Fecha Fin</label>
+                            <input type="date" id="mant-fechafin" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Descripción</label>
+                            <input type="text" id="mant-descripcion" placeholder="Cambio de rodamientos..." class="form-input">
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-3 flex justify-end">
+                            <button type="submit" class="btn-primary">
+                                <i data-lucide="save" class="w-4 h-4"></i> Guardar Mantenimiento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-gray-800 text-sm">Historial de Mantenimientos</h3>
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input type="text" id="search-mantenimientos" placeholder="Buscar..." oninput="filtrarYRenderizar('mantenimientos')" class="search-input">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-400 uppercase text-xs border-b border-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold w-12">#</th>
+                                    <th class="px-4 py-3 font-semibold">Equipo</th>
+                                    <th class="px-4 py-3 font-semibold">Tipo</th>
+                                    <th class="px-4 py-3 font-semibold">Fechas</th>
+                                    <th class="px-4 py-3 font-semibold">Costo</th>
+                                    <th class="px-4 py-3 font-semibold">Descripción</th>
+                                    <th class="px-4 py-3 font-semibold text-center w-24">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-mantenimientos"></tbody>
+                        </table>
+                    </div>
+                    <div id="pag-mantenimientos" class="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400 min-h-[56px]"></div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════
+                 SECCIÓN: FINANZAS Y GASTOS
+            ═══════════════════════════════════════════════ -->
+            <div id="vista-finanzas" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-gray-700 mb-5 flex items-center gap-2 uppercase tracking-wide">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-amber-500"></i> Registrar Transacción Financiera
+                    </h3>
+                    <form id="form-finanza" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Tipo de Movimiento *</label>
+                            <select id="fin-tipo" class="form-input">
+                                <option value="gasto">Gasto Operativo Sede</option>
+                                <option value="pagocliente">Cobro / Pago de Cliente</option>
+                                <option value="pagoproveedor">Pago a Proveedor</option>
+                                <option value="pagoempleado">Pago de Nómina a Empleado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Monto (S/) *</label>
+                            <input type="number" step="0.01" min="0" id="fin-monto" required class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Método de Pago *</label>
+                            <select id="fin-metodo" required class="form-input">
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Yape">Yape / Plin</option>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">N° Operación / Voucher *</label>
+                            <input type="text" id="fin-operacion" required class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Fecha *</label>
+                            <input type="date" id="fin-fecha" required class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Sede</label>
+                            <select id="fin-sede" class="form-input"></select>
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-3 flex justify-end">
+                            <button type="submit" class="btn-primary">
+                                <i data-lucide="save" class="w-4 h-4"></i> Guardar Movimiento
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-gray-800 text-sm">Registro de Gastos y Movimientos</h3>
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                            <input type="text" id="search-finanzas" placeholder="Buscar..." oninput="filtrarYRenderizar('finanzas')" class="search-input">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-400 uppercase text-xs border-b border-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold w-12">#</th>
+                                    <th class="px-4 py-3 font-semibold">Tipo</th>
+                                    <th class="px-4 py-3 font-semibold">Fecha</th>
+                                    <th class="px-4 py-3 font-semibold">Monto (PEN)</th>
+                                    <th class="px-4 py-3 font-semibold">Método</th>
+                                    <th class="px-4 py-3 font-semibold">N° Operación</th>
+                                    <th class="px-4 py-3 font-semibold text-center w-24">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-finanzas"></tbody>
+                        </table>
+                    </div>
+                    <div id="pag-finanzas" class="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400 min-h-[56px]"></div>
+                </div>
+            </div>
+
         </div><!-- /área de contenido -->
     </main>
 </div><!-- /layout -->
@@ -552,7 +980,7 @@
     @media (min-width: 640px) { .search-input { width: 14rem; } }
 </style>
 
-<script src="script.js?v=3"></script>
+<script src="script.js?v=4"></script>
 <script>lucide.createIcons();</script>
 </body>
 </html>
