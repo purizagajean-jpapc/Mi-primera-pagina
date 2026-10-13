@@ -498,6 +498,9 @@
         }
 
         function renderizarBurbujaAsesor(texto, fechaIso, esIA = false) {
+            const typingEl = document.querySelector('[id^="typing_"]');
+            if (typingEl) typingEl.remove();
+
             const hora = fechaIso ? new Date(fechaIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             const div = document.createElement('div');
             div.className = 'bg-amber-500 text-slate-950 p-3.5 rounded-2xl rounded-tl-none max-w-[88%] text-sm font-medium shadow-md space-y-1.5 transition animate-pulse-once';
@@ -594,6 +597,44 @@
                 mensajesRenderizadosIds.add(idKey);
                 msgUserDiv.id = 'msg_' + idKey;
                 msgUserDiv.removeAttribute('data-temp-msg');
+            }
+
+            // Disparar automáticamente a MaquiBot IA (Supabase Edge Function)
+            const nuevoRegistro = (insertData && insertData.length > 0) ? insertData[0] : {
+                idmensaje: Date.now(),
+                id_conversacion: convId,
+                cliente_nombre: convNombre,
+                remitente: 'cliente',
+                mensaje: mensajeUsuario
+            };
+
+            // Mostrar indicador "MaquiBot está escribiendo..."
+            const typingId = 'typing_' + Date.now();
+            const typingDiv = document.createElement('div');
+            typingDiv.id = typingId;
+            typingDiv.className = 'bg-amber-50 text-slate-800 border border-amber-200/80 px-3.5 py-2.5 rounded-2xl rounded-tl-none text-xs flex items-center gap-2 max-w-[75%] shadow-sm';
+            typingDiv.innerHTML = `
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                <span class="font-semibold text-slate-700">MaquiBot está escribiendo...</span>
+            `;
+            chatMensajes.appendChild(typingDiv);
+            chatMensajes.scrollTop = chatMensajes.scrollHeight;
+
+            try {
+                sbClient.functions.invoke('responder_chat_ia', {
+                    body: { record: nuevoRegistro }
+                }).then(({ data, error }) => {
+                    const elTyping = document.getElementById(typingId);
+                    if (elTyping) elTyping.remove();
+                    sincronizarChat(true);
+                }).catch((err) => {
+                    console.warn("Aviso al invocar IA:", err);
+                    const elTyping = document.getElementById(typingId);
+                    if (elTyping) elTyping.remove();
+                });
+            } catch (_) {
+                const elTyping = document.getElementById(typingId);
+                if (elTyping) elTyping.remove();
             }
         });
     </script>
