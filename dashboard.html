@@ -218,7 +218,15 @@
                     <form id="form-carrosa" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Modelo *</label>
-                            <input type="text" id="car-modelo" required class="form-input">
+                            <input type="text" id="car-modelo" list="lista-modelos-carrocerias" placeholder="Seleccionar o escribir..." required class="form-input">
+                            <datalist id="lista-modelos-carrocerias">
+                                <option value="Baranda"></option>
+                                <option value="Furgón"></option>
+                                <option value="Tolva"></option>
+                                <option value="Cisterna"></option>
+                                <option value="Volquete"></option>
+                                <option value="Furgón Frigorífico"></option>
+                            </datalist>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Altura (m) *</label>

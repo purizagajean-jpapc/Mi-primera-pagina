@@ -122,47 +122,134 @@
                 <p class="text-gray-600 text-lg">Explora nuestras soluciones en carrocerías fabricadas bajo los más altos estándares técnicos.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 flex flex-col justify-between">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- 1. BARANDA -->
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-gray-200 flex flex-col justify-between group">
                     <div class="p-6 space-y-4">
-                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400">
-                            <i data-lucide="box" class="w-20 h-20"></i>
+                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400 group-hover:scale-[1.02] transition duration-300 relative overflow-hidden">
+                            <i data-lucide="layers" class="w-20 h-20 transition duration-300 group-hover:text-amber-300"></i>
+                            <span class="absolute top-3 right-3 text-[10px] font-bold bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30 uppercase tracking-wider">
+                                Carga General
+                            </span>
                         </div>
-                        <h3 class="text-xl font-bold text-slate-800">Furgón Cerrado</h3>
-                        <p class="text-gray-600 text-sm">Ideal para la protección total de mercancías, carga seca y productos delicados.</p>
+                        <div class="space-y-1.5">
+                            <h3 class="text-xl font-bold text-slate-800">Baranda</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed">Estructura versátil y reforzada con compuertas abatibles, ideal para carga mixta, sacos, abarrotes y productos agrícolas.</p>
+                        </div>
                     </div>
                     <div class="p-6 pt-0">
-                        <button onclick="solicitarInfo('Furgón Cerrado')" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                        <button onclick="solicitarInfo('Baranda')" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-2.5 rounded-xl transition duration-200 text-sm flex items-center justify-center gap-2 shadow-sm">
+                            <i data-lucide="message-square" class="w-4 h-4"></i>
                             Solicitar Cotización
                         </button>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 flex flex-col justify-between">
+                <!-- 2. FURGÓN -->
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-gray-200 flex flex-col justify-between group">
                     <div class="p-6 space-y-4">
-                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400">
-                            <i data-lucide="truck" class="w-20 h-20"></i>
+                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400 group-hover:scale-[1.02] transition duration-300 relative overflow-hidden">
+                            <i data-lucide="box" class="w-20 h-20 transition duration-300 group-hover:text-amber-300"></i>
+                            <span class="absolute top-3 right-3 text-[10px] font-bold bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30 uppercase tracking-wider">
+                                Carga Seca
+                            </span>
                         </div>
-                        <h3 class="text-xl font-bold text-slate-800">Carrocería Granelera</h3>
-                        <p class="text-gray-600 text-sm">Diseñada para el transporte eficiente de granos, insumos agrícolas y materiales a granel.</p>
+                        <div class="space-y-1.5">
+                            <h3 class="text-xl font-bold text-slate-800">Furgón</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed">Carrocería metálica cerrada y hermética que brinda máxima protección contra la intemperie y seguridad para reparto y logística.</p>
+                        </div>
                     </div>
                     <div class="p-6 pt-0">
-                        <button onclick="solicitarInfo('Carrocería Granelera')" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                        <button onclick="solicitarInfo('Furgón')" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-2.5 rounded-xl transition duration-200 text-sm flex items-center justify-center gap-2 shadow-sm">
+                            <i data-lucide="message-square" class="w-4 h-4"></i>
                             Solicitar Cotización
                         </button>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-200 flex flex-col justify-between">
+                <!-- 3. TOLVA -->
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-gray-200 flex flex-col justify-between group">
                     <div class="p-6 space-y-4">
-                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400">
-                            <i data-lucide="layers" class="w-20 h-20"></i>
+                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400 group-hover:scale-[1.02] transition duration-300 relative overflow-hidden">
+                            <i data-lucide="archive" class="w-20 h-20 transition duration-300 group-hover:text-amber-300"></i>
+                            <span class="absolute top-3 right-3 text-[10px] font-bold bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30 uppercase tracking-wider">
+                                A Granel
+                            </span>
                         </div>
-                        <h3 class="text-xl font-bold text-slate-800">Plataforma Baranda Alta</h3>
-                        <p class="text-gray-600 text-sm">Versatilidad para carga pesada en general, sacos, maquinaria liviana y más.</p>
+                        <div class="space-y-1.5">
+                            <h3 class="text-xl font-bold text-slate-800">Tolva</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed">Construcción de acero antidesgaste de alta resistencia para el acarreo eficiente y continuo de granos, agregados y materiales industriales.</p>
+                        </div>
                     </div>
                     <div class="p-6 pt-0">
-                        <button onclick="solicitarInfo('Plataforma Baranda Alta')" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                        <button onclick="solicitarInfo('Tolva')" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-2.5 rounded-xl transition duration-200 text-sm flex items-center justify-center gap-2 shadow-sm">
+                            <i data-lucide="message-square" class="w-4 h-4"></i>
+                            Solicitar Cotización
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. CISTERNA -->
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-gray-200 flex flex-col justify-between group">
+                    <div class="p-6 space-y-4">
+                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400 group-hover:scale-[1.02] transition duration-300 relative overflow-hidden">
+                            <i data-lucide="droplets" class="w-20 h-20 transition duration-300 group-hover:text-amber-300"></i>
+                            <span class="absolute top-3 right-3 text-[10px] font-bold bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30 uppercase tracking-wider">
+                                Líquidos & Combustible
+                            </span>
+                        </div>
+                        <div class="space-y-1.5">
+                            <h3 class="text-xl font-bold text-slate-800">Cisterna</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed">Tanque cilíndrico en acero al carbono o inoxidable con rompeolas internos, para transporte seguro de agua, combustible y líquidos.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0">
+                        <button onclick="solicitarInfo('Cisterna')" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-2.5 rounded-xl transition duration-200 text-sm flex items-center justify-center gap-2 shadow-sm">
+                            <i data-lucide="message-square" class="w-4 h-4"></i>
+                            Solicitar Cotización
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5. VOLQUETE -->
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-gray-200 flex flex-col justify-between group">
+                    <div class="p-6 space-y-4">
+                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400 group-hover:scale-[1.02] transition duration-300 relative overflow-hidden">
+                            <i data-lucide="truck" class="w-20 h-20 transition duration-300 group-hover:text-amber-300"></i>
+                            <span class="absolute top-3 right-3 text-[10px] font-bold bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30 uppercase tracking-wider">
+                                Servicio Pesado
+                            </span>
+                        </div>
+                        <div class="space-y-1.5">
+                            <h3 class="text-xl font-bold text-slate-800">Volquete</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed">Carrocería basculante con sistema de elevación telescópico hidráulico, optimizada para movimiento de tierras, construcción y minería.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0">
+                        <button onclick="solicitarInfo('Volquete')" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-2.5 rounded-xl transition duration-200 text-sm flex items-center justify-center gap-2 shadow-sm">
+                            <i data-lucide="message-square" class="w-4 h-4"></i>
+                            Solicitar Cotización
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 6. FURGÓN FRIGORÍFICO -->
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition border border-gray-200 flex flex-col justify-between group">
+                    <div class="p-6 space-y-4">
+                        <div class="w-full h-48 bg-slate-900 rounded-xl flex items-center justify-center text-amber-400 group-hover:scale-[1.02] transition duration-300 relative overflow-hidden">
+                            <i data-lucide="snowflake" class="w-20 h-20 transition duration-300 group-hover:text-amber-300"></i>
+                            <span class="absolute top-3 right-3 text-[10px] font-bold bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30 uppercase tracking-wider">
+                                Cadena de Frío
+                            </span>
+                        </div>
+                        <div class="space-y-1.5">
+                            <h3 class="text-xl font-bold text-slate-800">Furgón Frigorífico</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed">Aislamiento térmico de poliuretano de alta densidad e interiores lavables, ideal para alimentos perecibles, carnes, lácteos y fármacos.</p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0">
+                        <button onclick="solicitarInfo('Furgón Frigorífico')" class="w-full bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white font-bold py-2.5 rounded-xl transition duration-200 text-sm flex items-center justify-center gap-2 shadow-sm">
+                            <i data-lucide="message-square" class="w-4 h-4"></i>
                             Solicitar Cotización
                         </button>
                     </div>
