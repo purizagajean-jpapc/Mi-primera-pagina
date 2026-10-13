@@ -519,193 +519,416 @@ function initMensajesWeb() {
     }
 }
 
-async function cargarMensajesWeb(isBackground = false) {
-    const lista    = document.getElementById('lista-mensajes');
-    const contador = document.getElementById('contador-mensajes');
-    const badgeSb  = document.getElementById('badge-mensajes');
-    if (!lista) return;
+// ================================================================
+// MENSAJES WEB — CHAT EN VIVO ESTILO MESSENGER / INSTAGRAM / WHATSAPP
+// ================================================================
+let currentChatConvId = null;
+let allWebMessages = [];
+let allConversationsMap = {};
+let chatSearchTerm = '';
 
-    if (!isBackground && lista.children.length === 0) {
-        lista.innerHTML = `
-            <div class="flex items-center gap-3 text-gray-400 p-4">
-                <div class="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
-                <p class="text-sm">Cargando consultas de clientes...</p>
+async function cargarMensajesWeb(isBackground = false) {
+    const listaConv = document.getElementById('lista-conversaciones');
+    const contador  = document.getElementById('contador-mensajes');
+    const badgeSb   = document.getElementById('badge-mensajes');
+    if (!listaConv) return;
+
+    if (!isBackground && Object.keys(allConversationsMap).length === 0) {
+        listaConv.innerHTML = `
+            <div class="p-8 text-center text-gray-400 text-xs">
+                <div class="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                Cargando conversaciones...
             </div>`;
     }
 
     const { data, error } = await supabaseClient
         .from('mensajes_web')
         .select('*')
-        .order('idmensaje', { ascending: false });
+        .order('idmensaje', { ascending: true });
 
     if (error) {
         console.error("Error al cargar mensajes de Supabase:", error);
         if (!isBackground) {
-            lista.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
-                Error al conectar con la bandeja de mensajes: ${error.message}
+            listaConv.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl m-2">
+                Error de conexión: ${error.message}
             </div>`;
         }
         return;
     }
 
-    const items = data || [];
-    if (contador) contador.textContent = `${items.length} Mensajes`;
+    allWebMessages = data || [];
+    allConversationsMap = {};
 
-    const pendientes = items.filter(m => m.estado !== 'Atendido').length;
+    // Agrupar mensajes en hilos de conversación (conversaciones)
+    allWebMessages.forEach(m => {
+        // Identificador de la conversación: id_conversacion o conv_idmensaje para compatibilidad
+        const convId = m.id_conversacion || ('conv_' + m.idmensaje);
+
+        if (!allConversationsMap[convId]) {
+            allConversationsMap[convId] = {
+                id: convId,
+                nombre: m.cliente_nombre || ('Cliente #' + (m.idmensaje || 'Web')),
+                telefono: m.cliente_telefono || '',
+                estado: m.estado || 'Pendiente',
+                mensajes: [],
+                ultimoMensaje: '',
+                ultimaFecha: m.fecha || new Date().toISOString(),
+                tienePendientes: false
+            };
+        }
+
+        const conv = allConversationsMap[convId];
+
+        // Si el registro ya trae remitente (cliente o asesor)
+        if (m.remitente) {
+            conv.mensajes.push({
+                id: m.idmensaje,
+                remitente: m.remitente,
+                texto: m.mensaje || '',
+                fecha: m.fecha
+            });
+            conv.ultimoMensaje = m.mensaje || '';
+            conv.ultimaFecha = m.fecha;
+            if (m.remitente === 'cliente' && m.estado !== 'Atendido') {
+                conv.tienePendientes = true;
+            }
+        } else {
+            // Compatibilidad para registros antiguos con campos (mensaje y respuesta)
+            conv.mensajes.push({
+                id: m.idmensaje,
+                remitente: 'cliente',
+                texto: m.mensaje || '',
+                fecha: m.fecha
+            });
+            conv.ultimoMensaje = m.mensaje || '';
+            conv.ultimaFecha = m.fecha;
+            if (m.estado !== 'Atendido') conv.tienePendientes = true;
+
+            if (m.respuesta) {
+                conv.mensajes.push({
+                    id: m.idmensaje + '_resp',
+                    remitente: 'asesor',
+                    texto: m.respuesta,
+                    fecha: m.fecha_respuesta || m.fecha
+                });
+                conv.ultimoMensaje = m.respuesta;
+                conv.ultimaFecha = m.fecha_respuesta || m.fecha;
+            }
+        }
+
+        if (m.estado) conv.estado = m.estado;
+    });
+
+    const listaConvArray = Object.values(allConversationsMap);
+    if (contador) contador.textContent = `${listaConvArray.length} Chats`;
+
+    // Conteo de pendientes para el badge del menú lateral
+    const totalPendientes = listaConvArray.filter(c => c.estado !== 'Atendido').length;
     if (badgeSb) {
-        if (pendientes > 0) {
-            badgeSb.textContent = pendientes;
+        if (totalPendientes > 0) {
+            badgeSb.textContent = totalPendientes;
             badgeSb.classList.remove('hidden');
         } else {
             badgeSb.classList.add('hidden');
         }
     }
 
-    if (items.length === 0) {
-        lista.innerHTML = '<p class="text-gray-300 text-sm text-center py-8">No hay consultas pendientes en este momento.</p>';
+    renderizarListaConversaciones();
+
+    // Si hay un chat abierto actualmente, refrescar su ventana de mensajes
+    if (currentChatConvId && allConversationsMap[currentChatConvId]) {
+        renderizarThreadActivo();
+    } else if (!currentChatConvId && listaConvArray.length > 0 && !isBackground) {
+        // Seleccionar automáticamente el primer chat más reciente
+        listaConvArray.sort((a, b) => new Date(b.ultimaFecha || 0) - new Date(a.ultimaFecha || 0));
+        seleccionarConversacion(listaConvArray[0].id);
+    }
+}
+
+window.filtrarConversaciones = function (val) {
+    chatSearchTerm = (val || '').toLowerCase().trim();
+    renderizarListaConversaciones();
+};
+
+function renderizarListaConversaciones() {
+    const listaEl = document.getElementById('lista-conversaciones');
+    if (!listaEl) return;
+
+    let convs = Object.values(allConversationsMap);
+
+    // Ordenar de más reciente a más antiguo
+    convs.sort((a, b) => new Date(b.ultimaFecha || 0) - new Date(a.ultimaFecha || 0));
+
+    if (chatSearchTerm) {
+        convs = convs.filter(c => 
+            c.nombre.toLowerCase().includes(chatSearchTerm) ||
+            c.id.toLowerCase().includes(chatSearchTerm) ||
+            c.ultimoMensaje.toLowerCase().includes(chatSearchTerm)
+        );
+    }
+
+    if (convs.length === 0) {
+        listaEl.innerHTML = `
+            <div class="p-8 text-center text-gray-400 text-xs">
+                ${chatSearchTerm ? 'No se encontraron conversaciones.' : 'No hay conversaciones activas.'}
+            </div>`;
         return;
     }
 
-    lista.innerHTML = items.map(m => {
-        const id = m.idmensaje;
-        const estado = m.estado || 'Pendiente';
-        const isAtendido = estado === 'Atendido';
-        const isRespondido = estado === 'Respondido' || !!m.respuesta;
-        const fechaTxt = m.fecha ? new Date(m.fecha).toLocaleString('es-PE') : '';
-        const fechaRespTxt = m.fecha_respuesta ? new Date(m.fecha_respuesta).toLocaleString('es-PE') : '';
+    listaEl.innerHTML = convs.map(c => {
+        const isActivo = c.id === currentChatConvId;
+        const fechaTxt = c.ultimaFecha ? formatFechaRelativa(c.ultimaFecha) : '';
+        const isAtendido = c.estado === 'Atendido';
+        const isRespondido = c.estado === 'Respondido';
 
         const badgeClass = isRespondido
-            ? 'bg-blue-100 text-blue-800 border-blue-200'
+            ? 'bg-blue-100 text-blue-700 border-blue-200'
             : isAtendido
             ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
             : 'bg-amber-100 text-amber-700 border-amber-200';
 
-        // Escapar caracteres para prevenir errores en onclick
-        const safeMensaje = (m.mensaje || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        const safeRespuesta = (m.respuesta || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const safeId = (c.id || '').replace(/'/g, "\\'");
+        const inicial = (c.nombre || 'C').charAt(0).toUpperCase();
 
         return `
-            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col justify-between gap-3 transition hover:shadow-sm">
-                <div class="space-y-2 flex-1 min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border ${badgeClass}">
-                            ${isRespondido ? 'Respondido' : estado}
-                        </span>
-                        <span class="text-xs text-gray-400">${fechaTxt}</span>
-                        <span class="text-xs text-slate-300 font-mono">#${id}</span>
-                    </div>
-                    <p class="text-sm text-gray-800 break-words font-medium">${m.mensaje || ''}</p>
-
-                    ${m.respuesta ? `
-                        <div class="mt-3 p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs space-y-1">
-                            <div class="flex items-center justify-between font-bold text-amber-900">
-                                <span class="flex items-center gap-1.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600"><polyline points="20 6 9 17 4 12"/></svg>
-                                    Respuesta enviada al cliente:
-                                </span>
-                                <span class="text-[11px] text-gray-400 font-normal">${fechaRespTxt}</span>
-                            </div>
-                            <p class="text-gray-700 leading-relaxed text-xs">${m.respuesta}</p>
-                        </div>
-                    ` : ''}
+            <div onclick="seleccionarConversacion('${safeId}')"
+                class="p-3.5 flex items-start gap-3 cursor-pointer transition border-l-4 ${isActivo ? 'bg-amber-50/70 border-amber-500' : 'border-transparent hover:bg-white bg-transparent'}">
+                <div class="w-10 h-10 rounded-full ${isActivo ? 'bg-amber-500 text-slate-900' : 'bg-slate-200 text-slate-700'} flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm mt-0.5">
+                    ${inicial}
                 </div>
-                <div class="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-100">
-                    <button onclick="openReplyModal(${id}, '${safeMensaje}', '${safeRespuesta}')"
-                        class="text-xs bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        ${m.respuesta ? 'Editar Respuesta' : 'Responder'}
-                    </button>
-                    ${(!isAtendido && !isRespondido) ? `
-                        <button onclick="marcarAtendido(${id})"
-                            class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1">
-                            ✓ Marcar Atendido
-                        </button>` : ''}
-                    <button onclick="eliminarMensaje(${id})"
-                        class="text-xs border border-red-200 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition ml-auto">
-                        Eliminar
-                    </button>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <h4 class="text-xs font-bold text-slate-800 truncate">${c.nombre}</h4>
+                        <span class="text-[10px] text-gray-400 flex-shrink-0">${fechaTxt}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 truncate mb-1.5 leading-snug">
+                        ${c.ultimoMensaje || '<span class="italic text-gray-300">Sin mensajes</span>'}
+                    </p>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-semibold px-2 py-0.2 rounded-full border ${badgeClass}">
+                            ${c.estado}
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-mono">#${c.id.length > 14 ? c.id.substring(0, 14) + '…' : c.id}</span>
+                    </div>
                 </div>
             </div>`;
     }).join('');
     lucide.createIcons();
 }
 
-window.openReplyModal = function (id, mensajeOriginal, respuestaActual = '') {
-    document.getElementById('reply-modal-title').textContent = `Responder Consulta #${id}`;
-    document.getElementById('reply-modal-original').textContent = `"${mensajeOriginal}"`;
-    document.getElementById('reply-modal-text').value = respuestaActual || '';
+window.seleccionarConversacion = function (convId) {
+    currentChatConvId = convId;
+    const emptyState = document.getElementById('chat-empty-state');
+    const container  = document.getElementById('chat-conversation-container');
 
-    document.getElementById('reply-modal-send-btn').onclick = async () => {
-        const respuesta = document.getElementById('reply-modal-text').value.trim();
-        if (!respuesta) {
-            showToast('Por favor escribe una respuesta para el cliente.', 'warning');
-            return;
+    if (emptyState) emptyState.classList.add('hidden');
+    if (container)  container.classList.remove('hidden');
+
+    const conv = allConversationsMap[convId];
+    if (conv) {
+        const nombreEl = document.getElementById('chat-header-nombre');
+        const idEl     = document.getElementById('chat-header-id');
+        const badgeEl  = document.getElementById('chat-header-badge');
+        const avatarEl = document.getElementById('chat-header-avatar');
+
+        if (nombreEl) nombreEl.textContent = conv.nombre;
+        if (idEl)     idEl.textContent = '#' + conv.id;
+        if (avatarEl) avatarEl.textContent = (conv.nombre || 'C').charAt(0).toUpperCase();
+
+        if (badgeEl) {
+            const isAtendido = conv.estado === 'Atendido';
+            const isRespondido = conv.estado === 'Respondido';
+            badgeEl.textContent = conv.estado;
+            badgeEl.className = `text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                isRespondido
+                    ? 'bg-blue-100 text-blue-700 border-blue-200'
+                    : isAtendido
+                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-100 text-amber-700 border-amber-200'
+            }`;
         }
+    }
 
-        const btn = document.getElementById('reply-modal-send-btn');
-        btn.disabled = true;
-        btn.innerHTML = `<div class="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div> Enviando...`;
+    renderizarThreadActivo();
+    renderizarListaConversaciones();
 
-        const { error } = await supabaseClient
-            .from('mensajes_web')
-            .update({
-                respuesta: respuesta,
-                estado: 'Respondido',
-                fecha_respuesta: new Date().toISOString()
-            })
-            .eq('idmensaje', id);
+    // Enfocar input para responder al instante
+    const inp = document.getElementById('input-chat-dashboard');
+    if (inp) inp.focus();
+};
 
-        btn.disabled = false;
-        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar Respuesta`;
+function renderizarThreadActivo() {
+    const threadEl = document.getElementById('chat-mensajes-thread');
+    if (!threadEl || !currentChatConvId) return;
 
-        if (error) {
-            console.error('Error al responder mensaje:', error);
-            if (error.message && (error.message.includes('column') || error.message.includes('respuesta') || error.code === '42703')) {
-                showToast('Faltan columnas en Supabase. Ejecuta: ALTER TABLE mensajes_web ADD COLUMN IF NOT EXISTS respuesta TEXT; ALTER TABLE mensajes_web ADD COLUMN IF NOT EXISTS fecha_respuesta TIMESTAMP WITH TIME ZONE;', 'error');
+    const conv = allConversationsMap[currentChatConvId];
+    if (!conv || !conv.mensajes.length) {
+        threadEl.innerHTML = `<div class="p-8 text-center text-gray-400 text-xs italic">No hay mensajes en esta conversación.</div>`;
+        return;
+    }
+
+    threadEl.innerHTML = `
+        <div class="text-center my-2">
+            <span class="text-[10px] bg-slate-200 text-slate-600 px-3 py-1 rounded-full font-medium">
+                Inicio de la conversación con ${conv.nombre}
+            </span>
+        </div>
+        ` + conv.mensajes.map(m => {
+            const isAsesor = m.remitente === 'asesor';
+            const fechaTxt = m.fecha ? new Date(m.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            const safeTxt  = (m.texto || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            if (isAsesor) {
+                // Mensaje del asesor (derecha - ámbar)
+                return `
+                    <div class="flex items-start justify-end gap-2.5 max-w-[85%] ml-auto group">
+                        <div class="flex flex-col items-end">
+                            <div class="bg-amber-500 text-slate-950 font-medium rounded-2xl rounded-tr-none px-4 py-2.5 shadow-sm text-sm break-words leading-relaxed">
+                                ${safeTxt}
+                            </div>
+                            <span class="text-[10px] text-gray-400 mt-1 mr-1">${fechaTxt} • Tú (Asesor)</span>
+                        </div>
+                        <div class="w-7 h-7 rounded-full bg-slate-900 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 shadow-sm">
+                            A
+                        </div>
+                    </div>`;
             } else {
-                showToast('Error al enviar respuesta: ' + error.message, 'error');
+                // Mensaje del cliente (izquierda - blanco/gris)
+                return `
+                    <div class="flex items-start gap-2.5 max-w-[85%] group">
+                        <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                            C
+                        </div>
+                        <div class="flex flex-col items-start">
+                            <div class="bg-white border border-gray-200 text-slate-800 rounded-2xl rounded-tl-none px-4 py-2.5 shadow-sm text-sm break-words leading-relaxed">
+                                ${safeTxt}
+                            </div>
+                            <span class="text-[10px] text-gray-400 mt-1 ml-1">${fechaTxt} • Cliente</span>
+                        </div>
+                    </div>`;
             }
-            return;
-        }
+        }).join('');
 
-        showToast('¡Respuesta enviada con éxito! El cliente la verá en la web.', 'success');
-        closeReplyModal();
-        cargarMensajesWeb();
+    // Auto-scroll al final del chat para ver el último mensaje
+    threadEl.scrollTop = threadEl.scrollHeight;
+}
+
+window.enviarMensajeDashboard = async function (e) {
+    if (e) e.preventDefault();
+    if (!currentChatConvId) {
+        showToast('Selecciona una conversación primero.', 'warning');
+        return;
+    }
+
+    const input = document.getElementById('input-chat-dashboard');
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    input.value = '';
+    const conv = allConversationsMap[currentChatConvId];
+    const btn = document.getElementById('btn-chat-dashboard-send');
+    if (btn) btn.disabled = true;
+
+    // Optimistic UI: agregar inmediatamente para feedback instantáneo
+    const msgOptimista = {
+        id: 'opt_' + Date.now(),
+        remitente: 'asesor',
+        texto: texto,
+        fecha: new Date().toISOString()
+    };
+    if (conv) {
+        conv.mensajes.push(msgOptimista);
+        conv.ultimoMensaje = texto;
+        conv.ultimaFecha = msgOptimista.fecha;
+        conv.estado = 'Respondido';
+        renderizarThreadActivo();
+        renderizarListaConversaciones();
+    }
+
+    // Guardar en Supabase
+    const payload = {
+        id_conversacion: currentChatConvId,
+        remitente: 'asesor',
+        mensaje: texto,
+        estado: 'Respondido',
+        fecha: new Date().toISOString()
     };
 
-    document.getElementById('reply-modal').classList.remove('hidden');
-    lucide.createIcons();
+    const { error } = await supabaseClient
+        .from('mensajes_web')
+        .insert([payload]);
+
+    if (btn) btn.disabled = false;
+
+    if (error) {
+        console.error("Error al enviar mensaje desde dashboard:", error);
+        if (error.message && (error.message.includes('id_conversacion') || error.message.includes('remitente') || error.code === '42703')) {
+            showToast('Faltan columnas en Supabase. Ejecuta el ALTER TABLE indicado en el chat.', 'error');
+        } else {
+            showToast('Error al enviar: ' + error.message, 'error');
+        }
+        return;
+    }
+
+    // Refrescar en segundo plano para obtener el ID real
+    cargarMensajesWeb(true);
 };
 
-window.closeReplyModal = function () {
-    document.getElementById('reply-modal').classList.add('hidden');
-};
-
-window.handleReplyModalBackdrop = function (e) {
-    if (e.target === document.getElementById('reply-modal')) closeReplyModal();
-};
-
-window.marcarAtendido = async function (id) {
+window.marcarConversacionAtendida = async function () {
+    if (!currentChatConvId) return;
     const { error } = await supabaseClient
         .from('mensajes_web')
         .update({ estado: 'Atendido' })
-        .eq('idmensaje', id);
-    if (error) { showToast('Error: ' + error.message, 'error'); return; }
-    showToast('Mensaje marcado como atendido.', 'success');
-    cargarMensajesWeb();
+        .eq('id_conversacion', currentChatConvId);
+
+    if (error) {
+        showToast('Error: ' + error.message, 'error');
+        return;
+    }
+    showToast('Conversación marcada como atendida.', 'success');
+    if (allConversationsMap[currentChatConvId]) {
+        allConversationsMap[currentChatConvId].estado = 'Atendido';
+        seleccionarConversacion(currentChatConvId);
+    }
+    cargarMensajesWeb(true);
 };
 
-window.eliminarMensaje = function (id) {
-    confirmarEliminar('Este mensaje será eliminado permanentemente.', async () => {
+window.eliminarConversacionActiva = function () {
+    if (!currentChatConvId) return;
+    confirmarEliminar('Toda la conversación y sus mensajes serán eliminados permanentemente.', async () => {
         const { error } = await supabaseClient
             .from('mensajes_web')
             .delete()
-            .eq('idmensaje', id);
-        if (error) { showToast('Error: ' + error.message, 'error'); return; }
-        showToast('Mensaje eliminado.', 'info');
+            .eq('id_conversacion', currentChatConvId);
+
+        if (error) {
+            showToast('Error: ' + error.message, 'error');
+            return;
+        }
+        showToast('Conversación eliminada.', 'info');
+        currentChatConvId = null;
+        document.getElementById('chat-conversation-container').classList.add('hidden');
+        document.getElementById('chat-empty-state').classList.remove('hidden');
         cargarMensajesWeb();
     });
 };
+
+function formatFechaRelativa(fechaIso) {
+    if (!fechaIso) return '';
+    const d = new Date(fechaIso);
+    const ahora = new Date();
+    const diffMs = ahora - d;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHoras = Math.floor(diffMs / 3600000);
+    const diffDias  = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Ahora';
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHoras < 24) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (diffDias === 1) return 'Ayer';
+    if (diffDias < 7) return `${diffDias}d`;
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
 
 // ================================================================
 // CARROCERÍAS

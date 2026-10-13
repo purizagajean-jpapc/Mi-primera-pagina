@@ -253,137 +253,197 @@
             if (chatBox.classList.contains('hidden')) toggleChat();
             const input = document.getElementById('chat-input');
             input.value = `Hola, quisiera recibir información y cotización del modelo: ${modelo}`;
+            input.focus();
         }
 
         const formChat = document.getElementById('form-chat');
         const chatMensajes = document.getElementById('chat-mensajes');
 
-        // Persistencia y recepción de respuestas en tiempo real
-        function getMisConsultas() {
-            try { return JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[]'); }
-            catch (_) { return []; }
-        }
-
-        function guardarConsultaLocal(id) {
-            const list = getMisConsultas();
-            if (!list.includes(id)) {
-                list.push(id);
-                localStorage.setItem('maquipesa_chat_ids', JSON.stringify(list));
+        // Obtener o generar identificador único y persistente de conversación
+        function getMiConversacionId() {
+            let convId = localStorage.getItem('maquipesa_chat_conv_id');
+            if (!convId) {
+                convId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+                localStorage.setItem('maquipesa_chat_conv_id', convId);
             }
-            verificarRespuestas();
+            return convId;
         }
 
-        const respuestasMostradas = new Set();
+        const mensajesRenderizadosIds = new Set();
+        let esPrimeraCarga = true;
 
-        async function verificarRespuestas() {
-            const ids = getMisConsultas();
-            if (!ids.length) return;
+        async function sincronizarChat(silencioso = false) {
+            const convId = getMiConversacionId();
 
+            // Consultar todos los mensajes de esta conversación
             const { data, error } = await sbClient
                 .from('mensajes_web')
                 .select('*')
-                .in('idmensaje', ids);
+                .or(`id_conversacion.eq.${convId},idmensaje.in.(${JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[0]').join(',')})`)
+                .order('idmensaje', { ascending: true });
 
-            if (error || !data) return;
-
-            data.forEach(item => {
-                if (item.respuesta && !respuestasMostradas.has(item.idmensaje)) {
-                    respuestasMostradas.add(item.idmensaje);
-
-                    const respDiv = document.createElement('div');
-                    respDiv.className = 'bg-amber-500 text-slate-900 p-3.5 rounded-2xl rounded-tl-none max-w-[90%] text-sm font-medium shadow-md space-y-1.5 transition animate-pulse-once';
-                    const fechaResp = item.fecha_respuesta ? new Date(item.fecha_respuesta).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-
-                    respDiv.innerHTML = `
-                        <div class="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-slate-900">
-                            <span class="flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                Asesor Maquipesa
-                            </span>
-                            <span class="text-slate-800 text-[10px] font-normal">${fechaResp}</span>
-                        </div>
-                        <p class="leading-relaxed text-slate-950 font-semibold">${item.respuesta}</p>
-                    `;
-                    chatMensajes.appendChild(respDiv);
-                    chatMensajes.scrollTop = chatMensajes.scrollHeight;
-
-                    // Si el chat estaba cerrado, abrirlo automáticamente para avisar al cliente
-                    const chatBox = document.getElementById('chat-box');
-                    if (chatBox && chatBox.classList.contains('hidden')) {
-                        toggleChat();
-                    }
+            if (error || !data) {
+                // Si la columna id_conversacion aún no existe en Supabase, intentar consulta general por IDs locales
+                const fallbackIds = JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[]');
+                if (fallbackIds.length > 0) {
+                    const { data: fbData } = await sbClient.from('mensajes_web').select('*').in('idmensaje', fallbackIds);
+                    if (fbData) procesarMensajesRecibidos(fbData, silencioso);
                 }
-            });
+                return;
+            }
+
+            procesarMensajesRecibidos(data, silencioso);
         }
 
-        // Suscripción en tiempo real con Supabase Realtime
+        function procesarMensajesRecibidos(listaMensajes, silencioso) {
+            let huboNuevosDelAsesor = false;
+
+            listaMensajes.forEach(item => {
+                const idMsg = item.idmensaje;
+
+                // 1. Mensaje del cliente
+                if (!mensajesRenderizadosIds.has('cli_' + idMsg)) {
+                    mensajesRenderizadosIds.add('cli_' + idMsg);
+                    const hora = item.fecha ? new Date(item.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                    
+                    // Solo renderizar si el remitente es cliente o no tiene remitente asignado
+                    if (item.remitente !== 'asesor') {
+                        const div = document.createElement('div');
+                        div.className = 'bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-sm space-y-1 shadow-sm';
+                        div.innerHTML = `
+                            <p class="leading-relaxed">${escapeHtml(item.mensaje || '')}</p>
+                            <span class="text-[10px] text-slate-400 block text-right">${hora}</span>
+                        `;
+                        chatMensajes.appendChild(div);
+                    }
+                }
+
+                // 2. Mensaje del asesor (ya sea por columna respuesta legacy o por nueva fila con remitente asesor)
+                if (item.remitente === 'asesor') {
+                    if (!mensajesRenderizadosIds.has('ase_' + idMsg)) {
+                        mensajesRenderizadosIds.add('ase_' + idMsg);
+                        huboNuevosDelAsesor = true;
+                        renderizarBurbujaAsesor(item.mensaje, item.fecha);
+                    }
+                } else if (item.respuesta && !mensajesRenderizadosIds.has('resp_' + idMsg)) {
+                    // Compatibilidad con registros que usaron la columna respuesta
+                    mensajesRenderizadosIds.add('resp_' + idMsg);
+                    huboNuevosDelAsesor = true;
+                    renderizarBurbujaAsesor(item.respuesta, item.fecha_respuesta || item.fecha);
+                }
+            });
+
+            if (listaMensajes.length > 0) {
+                chatMensajes.scrollTop = chatMensajes.scrollHeight;
+            }
+
+            // Si llegó una respuesta del asesor y no es la carga inicial, abrir el chat si estaba minimizado
+            if (huboNuevosDelAsesor && !esPrimeraCarga) {
+                const chatBox = document.getElementById('chat-box');
+                if (chatBox && chatBox.classList.contains('hidden')) {
+                    toggleChat();
+                }
+            }
+
+            esPrimeraCarga = false;
+        }
+
+        function renderizarBurbujaAsesor(texto, fechaIso) {
+            const hora = fechaIso ? new Date(fechaIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            const div = document.createElement('div');
+            div.className = 'bg-amber-500 text-slate-950 p-3.5 rounded-2xl rounded-tl-none max-w-[88%] text-sm font-medium shadow-md space-y-1.5 transition animate-pulse-once';
+            div.innerHTML = `
+                <div class="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-slate-900">
+                    <span class="flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                        Asesor Maquipesa
+                    </span>
+                    <span class="text-slate-800 text-[10px] font-normal">${hora}</span>
+                </div>
+                <p class="leading-relaxed font-semibold">${escapeHtml(texto || '')}</p>
+            `;
+            chatMensajes.appendChild(div);
+            chatMensajes.scrollTop = chatMensajes.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+            return (str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Suscripción Realtime y polling de sincronización continua
         try {
             sbClient.channel('chat_cliente_channel')
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mensajes_web' }, () => {
-                    verificarRespuestas();
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes_web' }, () => {
+                    sincronizarChat();
                 })
                 .subscribe();
         } catch (_) {}
 
-        // Comprobación periódica cada 4 segundos
-        setInterval(verificarRespuestas, 4000);
-        verificarRespuestas();
+        setInterval(() => sincronizarChat(true), 3500);
+        sincronizarChat();
 
+        // Enviar mensaje del usuario en el hilo continuo
         formChat.addEventListener('submit', async (e) => {
             e.preventDefault();
             const input = document.getElementById('chat-input');
             const mensajeUsuario = input.value.trim();
             if (!mensajeUsuario) return;
 
-            // Mostrar mensaje del usuario en pantalla
-            const msgUserDiv = document.createElement('div');
-            msgUserDiv.className = 'bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-sm';
-            msgUserDiv.innerText = mensajeUsuario;
-            chatMensajes.appendChild(msgUserDiv);
             input.value = '';
+            const convId = getMiConversacionId();
+            const ahora = new Date().toISOString();
+
+            // Optimistic UI: Mostrar burbuja en pantalla inmediatamente
+            const msgUserDiv = document.createElement('div');
+            msgUserDiv.className = 'bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-sm space-y-1 shadow-sm';
+            msgUserDiv.innerHTML = `
+                <p class="leading-relaxed">${escapeHtml(mensajeUsuario)}</p>
+                <span class="text-[10px] text-slate-400 block text-right">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            `;
+            chatMensajes.appendChild(msgUserDiv);
             chatMensajes.scrollTop = chatMensajes.scrollHeight;
 
-            // 1. Guardar en Supabase (Base de datos principal)
+            // Guardar en Supabase
             const { data: insertData, error: sbErr } = await sbClient.from('mensajes_web').insert([{
+                id_conversacion: convId,
+                remitente: 'cliente',
                 mensaje: mensajeUsuario,
-                estado: 'Pendiente'
+                estado: 'Pendiente',
+                fecha: ahora
             }]).select();
 
-            if (!sbErr && insertData && insertData.length > 0) {
-                guardarConsultaLocal(insertData[0].idmensaje);
-            }
-
-            // 2. Guardar también en Firebase de respaldo si está habilitado
-            try {
-                if (typeof firebase !== 'undefined' && firebase.database) {
-                    firebase.database().ref('mensajes_clientes').push({
-                        mensaje: mensajeUsuario,
-                        fecha: new Date().toLocaleString(),
-                        timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        estado: 'Pendiente'
-                    }).catch(() => {});
-                }
-            } catch (_) {}
-
-            // Si falló el envío principal
             if (sbErr) {
-                console.error("Error al enviar mensaje:", sbErr);
-                const msgErrDiv = document.createElement('div');
-                msgErrDiv.className = 'bg-red-100 text-red-800 p-3 rounded-2xl text-xs font-semibold';
-                msgErrDiv.innerText = 'No se pudo enviar el mensaje. Por favor intenta nuevamente o contáctanos por teléfono.';
-                chatMensajes.appendChild(msgErrDiv);
-                chatMensajes.scrollTop = chatMensajes.scrollHeight;
-                return;
-            }
+                console.warn("Reintentando envío con formato básico por compatibilidad...", sbErr);
+                // Si la columna id_conversacion no existe aún en Supabase, reintentar formato base
+                const { data: fbData, error: fbErr } = await sbClient.from('mensajes_web').insert([{
+                    mensaje: mensajeUsuario,
+                    estado: 'Pendiente'
+                }]).select();
 
-            // Respuesta automática inicial al usuario
-            setTimeout(() => {
-                const msgBotDiv = document.createElement('div');
-                msgBotDiv.className = 'bg-amber-100 text-slate-900 p-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm font-medium';
-                msgBotDiv.innerText = '¡Gracias por escribirnos! Tu consulta ha sido enviada a nuestro equipo. Un asesor te responderá aquí mismo en breve.';
-                chatMensajes.appendChild(msgBotDiv);
-                chatMensajes.scrollTop = chatMensajes.scrollHeight;
-            }, 700);
+                if (fbErr) {
+                    console.error("Error al enviar mensaje:", fbErr);
+                    const msgErrDiv = document.createElement('div');
+                    msgErrDiv.className = 'bg-red-100 text-red-800 p-3 rounded-2xl text-xs font-semibold';
+                    msgErrDiv.innerText = 'No se pudo enviar el mensaje. Intenta nuevamente.';
+                    chatMensajes.appendChild(msgErrDiv);
+                    return;
+                }
+
+                if (fbData && fbData.length > 0) {
+                    const localIds = JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[]');
+                    localIds.push(fbData[0].idmensaje);
+                    localStorage.setItem('maquipesa_chat_ids', JSON.stringify(localIds));
+                }
+            } else if (insertData && insertData.length > 0) {
+                const localIds = JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[]');
+                localIds.push(insertData[0].idmensaje);
+                localStorage.setItem('maquipesa_chat_ids', JSON.stringify(localIds));
+            }
         });
     </script>
 </body>
