@@ -526,11 +526,64 @@ let currentChatConvId = null;
 let allWebMessages = [];
 let allConversationsMap = {};
 let chatSearchTerm = '';
+let chatEstadoFiltro = 'todos'; // 'todos' | 'no_abiertos' | 'abiertos' | 'atendidos'
+
+window.cambiarFiltroEstado = function (filtro) {
+    chatEstadoFiltro = filtro;
+
+    const tabs = ['todos', 'no_abiertos', 'abiertos', 'atendidos'];
+    tabs.forEach(t => {
+        const btn = document.getElementById('tab-filtro-' + t);
+        if (btn) {
+            if (t === filtro) {
+                btn.className = 'text-[11px] font-bold px-2 py-1 rounded-lg bg-slate-900 text-white transition flex items-center gap-1 shadow-sm';
+            } else {
+                btn.className = 'text-[11px] font-semibold px-2 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition flex items-center gap-1';
+            }
+        }
+    });
+
+    renderizarListaConversaciones();
+};
+
+function actualizarBadgesContadores() {
+    const listaConvArray = Object.values(allConversationsMap);
+    const contador = document.getElementById('contador-mensajes');
+    if (contador) contador.textContent = `${listaConvArray.length} Chats`;
+
+    const totalSinAbrir = listaConvArray.filter(c => c.sinAbrirCount > 0 && c.id !== currentChatConvId).length;
+    const totalAbiertos = listaConvArray.filter(c => (c.sinAbrirCount === 0 || c.id === currentChatConvId) && c.estado !== 'Atendido').length;
+    const totalTodos = listaConvArray.length;
+
+    const badgeNoAbiertos = document.getElementById('badge-no-abiertos');
+    if (badgeNoAbiertos) {
+        if (totalSinAbrir > 0) {
+            badgeNoAbiertos.textContent = totalSinAbrir;
+            badgeNoAbiertos.classList.remove('hidden');
+        } else {
+            badgeNoAbiertos.classList.add('hidden');
+        }
+    }
+
+    const countTodos = document.getElementById('count-filtro-todos');
+    if (countTodos) countTodos.textContent = `(${totalTodos})`;
+
+    const countAbiertos = document.getElementById('count-filtro-abiertos');
+    if (countAbiertos) countAbiertos.textContent = `(${totalAbiertos})`;
+
+    const badgeSb = document.getElementById('badge-mensajes');
+    if (badgeSb) {
+        if (totalSinAbrir > 0) {
+            badgeSb.textContent = totalSinAbrir;
+            badgeSb.classList.remove('hidden');
+        } else {
+            badgeSb.classList.add('hidden');
+        }
+    }
+}
 
 async function cargarMensajesWeb(isBackground = false) {
     const listaConv = document.getElementById('lista-conversaciones');
-    const contador  = document.getElementById('contador-mensajes');
-    const badgeSb   = document.getElementById('badge-mensajes');
     if (!listaConv) return;
 
     if (!isBackground && Object.keys(allConversationsMap).length === 0) {
@@ -559,27 +612,32 @@ async function cargarMensajesWeb(isBackground = false) {
     allWebMessages = data || [];
     allConversationsMap = {};
 
-    // Agrupar mensajes en hilos de conversación (conversaciones)
+    // Agrupar mensajes en hilos de conversación exclusivos por navegador/sesión
     allWebMessages.forEach(m => {
-        // Identificador de la conversación: id_conversacion o conv_idmensaje para compatibilidad
-        const convId = m.id_conversacion || ('conv_' + m.idmensaje);
+        const convId = (m.id_conversacion && m.id_conversacion.trim()) ? m.id_conversacion.trim() : 'chat_general';
 
         if (!allConversationsMap[convId]) {
             allConversationsMap[convId] = {
                 id: convId,
-                nombre: m.cliente_nombre || ('Cliente #' + (m.idmensaje || 'Web')),
+                nombre: m.cliente_nombre || (convId === 'chat_general' ? 'Consultas Generales' : ('Navegador ' + convId.replace('chat_', '#'))),
                 telefono: m.cliente_telefono || '',
                 estado: m.estado || 'Pendiente',
                 mensajes: [],
                 ultimoMensaje: '',
                 ultimaFecha: m.fecha || new Date().toISOString(),
-                tienePendientes: false
+                sinAbrirCount: 0,
+                estaAbierto: false
             };
         }
 
         const conv = allConversationsMap[convId];
 
-        // Si el registro ya trae remitente (cliente o asesor)
+        // Contar mensajes del cliente no leídos (solo si el asesor no tiene abierto este chat)
+        const esNoLeido = (m.remitente !== 'asesor') && (m.leido === false || m.leido === null);
+        if (esNoLeido) {
+            conv.sinAbrirCount++;
+        }
+
         if (m.remitente) {
             conv.mensajes.push({
                 id: m.idmensaje,
@@ -589,11 +647,8 @@ async function cargarMensajesWeb(isBackground = false) {
             });
             conv.ultimoMensaje = m.mensaje || '';
             conv.ultimaFecha = m.fecha;
-            if (m.remitente === 'cliente' && m.estado !== 'Atendido') {
-                conv.tienePendientes = true;
-            }
         } else {
-            // Compatibilidad para registros antiguos con campos (mensaje y respuesta)
+            // Compatibilidad legacy
             conv.mensajes.push({
                 id: m.idmensaje,
                 remitente: 'cliente',
@@ -602,7 +657,6 @@ async function cargarMensajesWeb(isBackground = false) {
             });
             conv.ultimoMensaje = m.mensaje || '';
             conv.ultimaFecha = m.fecha;
-            if (m.estado !== 'Atendido') conv.tienePendientes = true;
 
             if (m.respuesta) {
                 conv.mensajes.push({
@@ -620,28 +674,23 @@ async function cargarMensajesWeb(isBackground = false) {
     });
 
     const listaConvArray = Object.values(allConversationsMap);
-    if (contador) contador.textContent = `${listaConvArray.length} Chats`;
 
-    // Conteo de pendientes para el badge del menú lateral
-    const totalPendientes = listaConvArray.filter(c => c.estado !== 'Atendido').length;
-    if (badgeSb) {
-        if (totalPendientes > 0) {
-            badgeSb.textContent = totalPendientes;
-            badgeSb.classList.remove('hidden');
+    // Marcar cuál es la que está abierta actualmente
+    listaConvArray.forEach(c => {
+        if (c.id === currentChatConvId) {
+            c.estaAbierto = true;
+            c.sinAbrirCount = 0;
         } else {
-            badgeSb.classList.add('hidden');
+            c.estaAbierto = false;
         }
-    }
+    });
 
+    actualizarBadgesContadores();
     renderizarListaConversaciones();
 
     // Si hay un chat abierto actualmente, refrescar su ventana de mensajes
     if (currentChatConvId && allConversationsMap[currentChatConvId]) {
         renderizarThreadActivo();
-    } else if (!currentChatConvId && listaConvArray.length > 0 && !isBackground) {
-        // Seleccionar automáticamente el primer chat más reciente
-        listaConvArray.sort((a, b) => new Date(b.ultimaFecha || 0) - new Date(a.ultimaFecha || 0));
-        seleccionarConversacion(listaConvArray[0].id);
     }
 }
 
@@ -656,9 +705,16 @@ function renderizarListaConversaciones() {
 
     let convs = Object.values(allConversationsMap);
 
-    // Ordenar de más reciente a más antiguo
-    convs.sort((a, b) => new Date(b.ultimaFecha || 0) - new Date(a.ultimaFecha || 0));
+    // Ordenar: primero los que tienen mensajes sin abrir, luego por fecha más reciente
+    convs.sort((a, b) => {
+        const aNoAbierto = a.sinAbrirCount > 0 && a.id !== currentChatConvId;
+        const bNoAbierto = b.sinAbrirCount > 0 && b.id !== currentChatConvId;
+        if (aNoAbierto && !bNoAbierto) return -1;
+        if (!aNoAbierto && bNoAbierto) return 1;
+        return new Date(b.ultimaFecha || 0) - new Date(a.ultimaFecha || 0);
+    });
 
+    // Filtrar por texto de búsqueda
     if (chatSearchTerm) {
         convs = convs.filter(c => 
             c.nombre.toLowerCase().includes(chatSearchTerm) ||
@@ -667,48 +723,104 @@ function renderizarListaConversaciones() {
         );
     }
 
+    // Filtrar por pestaña de estado
+    if (chatEstadoFiltro === 'no_abiertos') {
+        convs = convs.filter(c => c.sinAbrirCount > 0 && c.id !== currentChatConvId);
+    } else if (chatEstadoFiltro === 'abiertos') {
+        convs = convs.filter(c => (c.sinAbrirCount === 0 || c.id === currentChatConvId) && c.estado !== 'Atendido');
+    } else if (chatEstadoFiltro === 'atendidos') {
+        convs = convs.filter(c => c.estado === 'Atendido');
+    }
+
     if (convs.length === 0) {
         listaEl.innerHTML = `
             <div class="p-8 text-center text-gray-400 text-xs">
-                ${chatSearchTerm ? 'No se encontraron conversaciones.' : 'No hay conversaciones activas.'}
+                ${chatSearchTerm 
+                    ? 'No se encontraron conversaciones con esa búsqueda.' 
+                    : chatEstadoFiltro === 'no_abiertos'
+                    ? '🎉 ¡No hay chats sin abrir! Todos los mensajes han sido abiertos.'
+                    : chatEstadoFiltro === 'abiertos'
+                    ? 'No hay chats abiertos en este momento.'
+                    : 'No hay conversaciones en esta vista.'}
             </div>`;
         return;
     }
 
     listaEl.innerHTML = convs.map(c => {
         const isActivo = c.id === currentChatConvId;
-        const fechaTxt = c.ultimaFecha ? formatFechaRelativa(c.ultimaFecha) : '';
+        const isSinAbrir = !isActivo && (c.sinAbrirCount > 0);
         const isAtendido = c.estado === 'Atendido';
-        const isRespondido = c.estado === 'Respondido';
+        const tieneRespuestaAsesor = c.mensajes.some(m => m.remitente === 'asesor') || c.estado === 'Respondido';
+        const fechaTxt = c.ultimaFecha ? formatFechaRelativa(c.ultimaFecha) : '';
 
-        const badgeClass = isRespondido
-            ? 'bg-blue-100 text-blue-700 border-blue-200'
-            : isAtendido
-            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-            : 'bg-amber-100 text-amber-700 border-amber-200';
+        // Badge indicador visual claro
+        let badgeHtml = '';
+        if (isActivo) {
+            badgeHtml = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 flex items-center gap-1 shadow-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping"></span>
+                ● Chat Abierto
+            </span>`;
+        } else if (isSinAbrir) {
+            badgeHtml = `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 flex items-center gap-1 shadow-xs">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                Sin Abrir
+            </span>`;
+        } else if (isAtendido) {
+            badgeHtml = `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i> Atendido
+            </span>`;
+        } else if (tieneRespuestaAsesor) {
+            badgeHtml = `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
+                <i data-lucide="reply" class="w-3 h-3 text-blue-600"></i> Respondido
+            </span>`;
+        } else {
+            badgeHtml = `<span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1">
+                <i data-lucide="eye" class="w-3 h-3 text-slate-500"></i> Abierto (Leído)
+            </span>`;
+        }
 
         const safeId = (c.id || '').replace(/'/g, "\\'");
         const inicial = (c.nombre || 'C').charAt(0).toUpperCase();
 
         return `
             <div onclick="seleccionarConversacion('${safeId}')"
-                class="p-3.5 flex items-start gap-3 cursor-pointer transition border-l-4 ${isActivo ? 'bg-amber-50/70 border-amber-500' : 'border-transparent hover:bg-white bg-transparent'}">
-                <div class="w-10 h-10 rounded-full ${isActivo ? 'bg-amber-500 text-slate-900' : 'bg-slate-200 text-slate-700'} flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-sm mt-0.5">
-                    ${inicial}
+                class="p-3.5 flex items-start gap-3 cursor-pointer transition border-l-4 ${
+                    isActivo 
+                        ? 'bg-amber-50/80 border-amber-500 shadow-xs' 
+                        : isSinAbrir
+                        ? 'bg-red-50/40 hover:bg-red-50/70 border-red-500'
+                        : 'border-transparent hover:bg-white bg-transparent'
+                }">
+                <div class="relative flex-shrink-0 mt-0.5">
+                    <div class="w-10 h-10 rounded-full ${
+                        isActivo ? 'bg-amber-500 text-slate-950 font-bold' : isSinAbrir ? 'bg-red-500 text-white font-bold' : 'bg-slate-200 text-slate-700'
+                    } flex items-center justify-center font-bold text-sm shadow-sm">
+                        ${inicial}
+                    </div>
+                    ${isSinAbrir ? `<span class="w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full absolute -top-0.5 -right-0.5 animate-pulse"></span>` : ''}
+                    ${isActivo ? `<span class="w-3 h-3 bg-green-500 border-2 border-white rounded-full absolute bottom-0 right-0"></span>` : ''}
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center justify-between gap-1 mb-1">
-                        <h4 class="text-xs font-bold text-slate-800 truncate">${c.nombre}</h4>
-                        <span class="text-[10px] text-gray-400 flex-shrink-0">${fechaTxt}</span>
+                        <h4 class="text-xs ${isSinAbrir ? 'font-black text-slate-950 flex items-center gap-1.5' : isActivo ? 'font-black text-amber-950' : 'font-bold text-slate-800'} truncate">
+                            ${c.nombre}
+                            ${isSinAbrir ? `<span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>` : ''}
+                        </h4>
+                        <span class="text-[10px] ${isSinAbrir ? 'font-bold text-red-600' : 'text-gray-400'} flex-shrink-0">${fechaTxt}</span>
                     </div>
-                    <p class="text-xs text-gray-500 truncate mb-1.5 leading-snug">
+                    <p class="text-xs ${isSinAbrir ? 'text-slate-900 font-bold' : 'text-gray-500'} truncate mb-1.5 leading-snug">
                         ${c.ultimoMensaje || '<span class="italic text-gray-300">Sin mensajes</span>'}
                     </p>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-[10px] font-semibold px-2 py-0.2 rounded-full border ${badgeClass}">
-                            ${c.estado}
-                        </span>
-                        <span class="text-[10px] text-slate-400 font-mono">#${c.id.length > 14 ? c.id.substring(0, 14) + '…' : c.id}</span>
+                    <div class="flex items-center justify-between gap-1.5">
+                        <div class="flex items-center gap-1.5">
+                            ${badgeHtml}
+                            <span class="text-[10px] text-slate-400 font-mono">#${c.id.length > 14 ? c.id.substring(0, 14) + '…' : c.id}</span>
+                        </div>
+                        ${c.sinAbrirCount > 0 ? `
+                            <span class="px-1.5 py-0.5 rounded-full bg-red-500 text-white font-black text-[10px] flex items-center justify-center shadow-sm">
+                                ${c.sinAbrirCount} nuevo${c.sinAbrirCount > 1 ? 's' : ''}
+                            </span>
+                        ` : ''}
                     </div>
                 </div>
             </div>`;
@@ -726,6 +838,17 @@ window.seleccionarConversacion = function (convId) {
 
     const conv = allConversationsMap[convId];
     if (conv) {
+        conv.estaAbierto = true;
+        conv.sinAbrirCount = 0;
+
+        // Actualizar en Supabase para marcar los mensajes de este cliente como leídos
+        supabaseClient
+            .from('mensajes_web')
+            .update({ leido: true })
+            .eq('id_conversacion', convId)
+            .then(() => {})
+            .catch(() => {});
+
         const nombreEl = document.getElementById('chat-header-nombre');
         const idEl     = document.getElementById('chat-header-id');
         const badgeEl  = document.getElementById('chat-header-badge');
@@ -736,19 +859,12 @@ window.seleccionarConversacion = function (convId) {
         if (avatarEl) avatarEl.textContent = (conv.nombre || 'C').charAt(0).toUpperCase();
 
         if (badgeEl) {
-            const isAtendido = conv.estado === 'Atendido';
-            const isRespondido = conv.estado === 'Respondido';
-            badgeEl.textContent = conv.estado;
-            badgeEl.className = `text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                isRespondido
-                    ? 'bg-blue-100 text-blue-700 border-blue-200'
-                    : isAtendido
-                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                    : 'bg-amber-100 text-amber-700 border-amber-200'
-            }`;
+            badgeEl.textContent = 'Chat Abierto';
+            badgeEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 shadow-sm';
         }
     }
 
+    actualizarBadgesContadores();
     renderizarThreadActivo();
     renderizarListaConversaciones();
 
@@ -845,12 +961,14 @@ window.enviarMensajeDashboard = async function (e) {
         renderizarListaConversaciones();
     }
 
-    // Guardar en Supabase
+    // Guardar en Supabase vinculado a este chat específico
     const payload = {
         id_conversacion: currentChatConvId,
+        cliente_nombre: conv ? conv.nombre : 'Cliente Web',
         remitente: 'asesor',
         mensaje: texto,
         estado: 'Respondido',
+        leido: true,
         fecha: new Date().toISOString()
     };
 

@@ -193,7 +193,7 @@
                 <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                 <div>
                     <h4 class="font-bold text-sm">Atención al Cliente - Maquipesa</h4>
-                    <p class="text-xs text-slate-400">En línea para atenderte</p>
+                    <p id="chat-header-session" class="text-xs text-amber-400 font-semibold">● En línea para atenderte</p>
                 </div>
             </div>
             <button onclick="toggleChat()" class="text-slate-400 hover:text-white">
@@ -259,55 +259,52 @@
         const formChat = document.getElementById('form-chat');
         const chatMensajes = document.getElementById('chat-mensajes');
 
-        // Obtener o generar identificador único y persistente de conversación
-        function getMiConversacionId() {
-            let convId = localStorage.getItem('maquipesa_chat_conv_id');
+        // Generar o recuperar la sesión exclusiva de este navegador
+        function getMiConversacion() {
+            let convId     = localStorage.getItem('maquipesa_chat_conv_id');
+            let convNombre = localStorage.getItem('maquipesa_chat_user_name');
             if (!convId) {
-                convId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+                // Código único para este navegador (ej. NAV-9842)
+                const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+                convId     = 'chat_' + code;
+                convNombre = 'Navegador #' + code;
                 localStorage.setItem('maquipesa_chat_conv_id', convId);
+                localStorage.setItem('maquipesa_chat_user_name', convNombre);
             }
-            return convId;
+
+            const headerSession = document.getElementById('chat-header-session');
+            if (headerSession) {
+                headerSession.textContent = `● En línea (${convNombre})`;
+            }
+
+            return { id: convId, nombre: convNombre };
         }
 
         const mensajesRenderizadosIds = new Set();
         let esPrimeraCarga = true;
 
         async function sincronizarChat(silencioso = false) {
-            const convId = getMiConversacionId();
+            const { id: convId } = getMiConversacion();
 
-            // Consultar todos los mensajes de esta conversación
+            // Consultar exclusivamente los mensajes pertenecientes a este navegador
             const { data, error } = await sbClient
                 .from('mensajes_web')
                 .select('*')
-                .or(`id_conversacion.eq.${convId},idmensaje.in.(${JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[0]').join(',')})`)
+                .eq('id_conversacion', convId)
                 .order('idmensaje', { ascending: true });
 
-            if (error || !data) {
-                // Si la columna id_conversacion aún no existe en Supabase, intentar consulta general por IDs locales
-                const fallbackIds = JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[]');
-                if (fallbackIds.length > 0) {
-                    const { data: fbData } = await sbClient.from('mensajes_web').select('*').in('idmensaje', fallbackIds);
-                    if (fbData) procesarMensajesRecibidos(fbData, silencioso);
-                }
-                return;
-            }
+            if (error || !data) return;
 
-            procesarMensajesRecibidos(data, silencioso);
-        }
-
-        function procesarMensajesRecibidos(listaMensajes, silencioso) {
             let huboNuevosDelAsesor = false;
 
-            listaMensajes.forEach(item => {
+            data.forEach(item => {
                 const idMsg = item.idmensaje;
 
-                // 1. Mensaje del cliente
-                if (!mensajesRenderizadosIds.has('cli_' + idMsg)) {
-                    mensajesRenderizadosIds.add('cli_' + idMsg);
-                    const hora = item.fecha ? new Date(item.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                    
-                    // Solo renderizar si el remitente es cliente o no tiene remitente asignado
-                    if (item.remitente !== 'asesor') {
+                // 1. Mensaje del cliente de este navegador
+                if (item.remitente !== 'asesor') {
+                    if (!mensajesRenderizadosIds.has('cli_' + idMsg)) {
+                        mensajesRenderizadosIds.add('cli_' + idMsg);
+                        const hora = item.fecha ? new Date(item.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                         const div = document.createElement('div');
                         div.className = 'bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-sm space-y-1 shadow-sm';
                         div.innerHTML = `
@@ -318,26 +315,24 @@
                     }
                 }
 
-                // 2. Mensaje del asesor (ya sea por columna respuesta legacy o por nueva fila con remitente asesor)
-                if (item.remitente === 'asesor') {
-                    if (!mensajesRenderizadosIds.has('ase_' + idMsg)) {
-                        mensajesRenderizadosIds.add('ase_' + idMsg);
+                // 2. Respuesta del asesor exclusiva para este navegador
+                if (item.remitente === 'asesor' || item.respuesta) {
+                    const idKey = 'ase_' + idMsg;
+                    if (!mensajesRenderizadosIds.has(idKey)) {
+                        mensajesRenderizadosIds.add(idKey);
                         huboNuevosDelAsesor = true;
-                        renderizarBurbujaAsesor(item.mensaje, item.fecha);
+                        const textoResp = item.remitente === 'asesor' ? item.mensaje : item.respuesta;
+                        const fechaResp = item.fecha_respuesta || item.fecha;
+                        renderizarBurbujaAsesor(textoResp, fechaResp);
                     }
-                } else if (item.respuesta && !mensajesRenderizadosIds.has('resp_' + idMsg)) {
-                    // Compatibilidad con registros que usaron la columna respuesta
-                    mensajesRenderizadosIds.add('resp_' + idMsg);
-                    huboNuevosDelAsesor = true;
-                    renderizarBurbujaAsesor(item.respuesta, item.fecha_respuesta || item.fecha);
                 }
             });
 
-            if (listaMensajes.length > 0) {
+            if (data.length > 0) {
                 chatMensajes.scrollTop = chatMensajes.scrollHeight;
             }
 
-            // Si llegó una respuesta del asesor y no es la carga inicial, abrir el chat si estaba minimizado
+            // Si llegó una respuesta del asesor y no es la primera carga, abrir el chat si estaba minimizado
             if (huboNuevosDelAsesor && !esPrimeraCarga) {
                 const chatBox = document.getElementById('chat-box');
                 if (chatBox && chatBox.classList.contains('hidden')) {
@@ -375,19 +370,20 @@
                 .replace(/'/g, '&#039;');
         }
 
-        // Suscripción Realtime y polling de sincronización continua
+        // Suscripción Realtime y sincronización periódica
         try {
             sbClient.channel('chat_cliente_channel')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes_web' }, () => {
-                    sincronizarChat();
+                    sincronizarChat(true);
                 })
                 .subscribe();
         } catch (_) {}
 
-        setInterval(() => sincronizarChat(true), 3500);
+        getMiConversacion();
+        setInterval(() => sincronizarChat(true), 3000);
         sincronizarChat();
 
-        // Enviar mensaje del usuario en el hilo continuo
+        // Enviar mensaje en el hilo exclusivo de este navegador
         formChat.addEventListener('submit', async (e) => {
             e.preventDefault();
             const input = document.getElementById('chat-input');
@@ -395,10 +391,10 @@
             if (!mensajeUsuario) return;
 
             input.value = '';
-            const convId = getMiConversacionId();
+            const { id: convId, nombre: convNombre } = getMiConversacion();
             const ahora = new Date().toISOString();
 
-            // Optimistic UI: Mostrar burbuja en pantalla inmediatamente
+            // Optimistic UI: Mostrar inmediatamente en el chat
             const msgUserDiv = document.createElement('div');
             msgUserDiv.className = 'bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-sm space-y-1 shadow-sm';
             msgUserDiv.innerHTML = `
@@ -408,41 +404,23 @@
             chatMensajes.appendChild(msgUserDiv);
             chatMensajes.scrollTop = chatMensajes.scrollHeight;
 
-            // Guardar en Supabase
-            const { data: insertData, error: sbErr } = await sbClient.from('mensajes_web').insert([{
+            // Guardar en Supabase vinculado exclusivamente a este navegador
+            const { error: sbErr } = await sbClient.from('mensajes_web').insert([{
                 id_conversacion: convId,
+                cliente_nombre: convNombre,
                 remitente: 'cliente',
                 mensaje: mensajeUsuario,
                 estado: 'Pendiente',
+                leido: false,
                 fecha: ahora
-            }]).select();
+            }]);
 
             if (sbErr) {
-                console.warn("Reintentando envío con formato básico por compatibilidad...", sbErr);
-                // Si la columna id_conversacion no existe aún en Supabase, reintentar formato base
-                const { data: fbData, error: fbErr } = await sbClient.from('mensajes_web').insert([{
-                    mensaje: mensajeUsuario,
-                    estado: 'Pendiente'
-                }]).select();
-
-                if (fbErr) {
-                    console.error("Error al enviar mensaje:", fbErr);
-                    const msgErrDiv = document.createElement('div');
-                    msgErrDiv.className = 'bg-red-100 text-red-800 p-3 rounded-2xl text-xs font-semibold';
-                    msgErrDiv.innerText = 'No se pudo enviar el mensaje. Intenta nuevamente.';
-                    chatMensajes.appendChild(msgErrDiv);
-                    return;
-                }
-
-                if (fbData && fbData.length > 0) {
-                    const localIds = JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[]');
-                    localIds.push(fbData[0].idmensaje);
-                    localStorage.setItem('maquipesa_chat_ids', JSON.stringify(localIds));
-                }
-            } else if (insertData && insertData.length > 0) {
-                const localIds = JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[]');
-                localIds.push(insertData[0].idmensaje);
-                localStorage.setItem('maquipesa_chat_ids', JSON.stringify(localIds));
+                console.error("Error al enviar mensaje:", sbErr);
+                const msgErrDiv = document.createElement('div');
+                msgErrDiv.className = 'bg-red-100 text-red-800 p-3 rounded-2xl text-xs font-semibold';
+                msgErrDiv.innerText = 'No se pudo enviar el mensaje: ' + sbErr.message;
+                chatMensajes.appendChild(msgErrDiv);
             }
         });
     </script>
