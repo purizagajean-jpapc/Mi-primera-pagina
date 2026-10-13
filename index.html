@@ -258,6 +258,77 @@
         const formChat = document.getElementById('form-chat');
         const chatMensajes = document.getElementById('chat-mensajes');
 
+        // Persistencia y recepción de respuestas en tiempo real
+        function getMisConsultas() {
+            try { return JSON.parse(localStorage.getItem('maquipesa_chat_ids') || '[]'); }
+            catch (_) { return []; }
+        }
+
+        function guardarConsultaLocal(id) {
+            const list = getMisConsultas();
+            if (!list.includes(id)) {
+                list.push(id);
+                localStorage.setItem('maquipesa_chat_ids', JSON.stringify(list));
+            }
+            verificarRespuestas();
+        }
+
+        const respuestasMostradas = new Set();
+
+        async function verificarRespuestas() {
+            const ids = getMisConsultas();
+            if (!ids.length) return;
+
+            const { data, error } = await sbClient
+                .from('mensajes_web')
+                .select('*')
+                .in('idmensaje', ids);
+
+            if (error || !data) return;
+
+            data.forEach(item => {
+                if (item.respuesta && !respuestasMostradas.has(item.idmensaje)) {
+                    respuestasMostradas.add(item.idmensaje);
+
+                    const respDiv = document.createElement('div');
+                    respDiv.className = 'bg-amber-500 text-slate-900 p-3.5 rounded-2xl rounded-tl-none max-w-[90%] text-sm font-medium shadow-md space-y-1.5 transition animate-pulse-once';
+                    const fechaResp = item.fecha_respuesta ? new Date(item.fecha_respuesta).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+                    respDiv.innerHTML = `
+                        <div class="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-slate-900">
+                            <span class="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                                Asesor Maquipesa
+                            </span>
+                            <span class="text-slate-800 text-[10px] font-normal">${fechaResp}</span>
+                        </div>
+                        <p class="leading-relaxed text-slate-950 font-semibold">${item.respuesta}</p>
+                    `;
+                    chatMensajes.appendChild(respDiv);
+                    chatMensajes.scrollTop = chatMensajes.scrollHeight;
+
+                    // Si el chat estaba cerrado, abrirlo automáticamente para avisar al cliente
+                    const chatBox = document.getElementById('chat-box');
+                    if (chatBox && chatBox.classList.contains('hidden')) {
+                        toggleChat();
+                    }
+                }
+            });
+        }
+
+        // Suscripción en tiempo real con Supabase Realtime
+        try {
+            sbClient.channel('chat_cliente_channel')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mensajes_web' }, () => {
+                    verificarRespuestas();
+                })
+                .subscribe();
+        } catch (_) {}
+
+        // Comprobación periódica cada 4 segundos
+        setInterval(verificarRespuestas, 4000);
+        verificarRespuestas();
+
         formChat.addEventListener('submit', async (e) => {
             e.preventDefault();
             const input = document.getElementById('chat-input');
@@ -273,10 +344,14 @@
             chatMensajes.scrollTop = chatMensajes.scrollHeight;
 
             // 1. Guardar en Supabase (Base de datos principal)
-            const { error: sbErr } = await sbClient.from('mensajes_web').insert([{
+            const { data: insertData, error: sbErr } = await sbClient.from('mensajes_web').insert([{
                 mensaje: mensajeUsuario,
                 estado: 'Pendiente'
-            }]);
+            }]).select();
+
+            if (!sbErr && insertData && insertData.length > 0) {
+                guardarConsultaLocal(insertData[0].idmensaje);
+            }
 
             // 2. Guardar también en Firebase de respaldo si está habilitado
             try {
@@ -301,14 +376,14 @@
                 return;
             }
 
-            // Respuesta automática al usuario
+            // Respuesta automática inicial al usuario
             setTimeout(() => {
                 const msgBotDiv = document.createElement('div');
                 msgBotDiv.className = 'bg-amber-100 text-slate-900 p-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm font-medium';
-                msgBotDiv.innerText = '¡Gracias por escribirnos! Tu consulta ha sido registrada en nuestro sistema y un asesor se comunicará contigo a la brevedad.';
+                msgBotDiv.innerText = '¡Gracias por escribirnos! Tu consulta ha sido enviada a nuestro equipo. Un asesor te responderá aquí mismo en breve.';
                 chatMensajes.appendChild(msgBotDiv);
                 chatMensajes.scrollTop = chatMensajes.scrollHeight;
-            }, 800);
+            }, 700);
         });
     </script>
 </body>

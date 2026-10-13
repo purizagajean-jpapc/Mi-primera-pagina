@@ -570,31 +570,58 @@ async function cargarMensajesWeb(isBackground = false) {
         const id = m.idmensaje;
         const estado = m.estado || 'Pendiente';
         const isAtendido = estado === 'Atendido';
+        const isRespondido = estado === 'Respondido' || !!m.respuesta;
         const fechaTxt = m.fecha ? new Date(m.fecha).toLocaleString('es-PE') : '';
+        const fechaRespTxt = m.fecha_respuesta ? new Date(m.fecha_respuesta).toLocaleString('es-PE') : '';
+
+        const badgeClass = isRespondido
+            ? 'bg-blue-100 text-blue-800 border-blue-200'
+            : isAtendido
+            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+            : 'bg-amber-100 text-amber-700 border-amber-200';
+
+        // Escapar caracteres para prevenir errores en onclick
+        const safeMensaje = (m.mensaje || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const safeRespuesta = (m.respuesta || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
         return `
-            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition hover:shadow-sm">
-                <div class="space-y-1 flex-1 min-w-0">
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col justify-between gap-3 transition hover:shadow-sm">
+                <div class="space-y-2 flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border ${isAtendido
-                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                            : 'bg-amber-100 text-amber-700 border-amber-200'}">
-                            ${estado}
+                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border ${badgeClass}">
+                            ${isRespondido ? 'Respondido' : estado}
                         </span>
                         <span class="text-xs text-gray-400">${fechaTxt}</span>
                         <span class="text-xs text-slate-300 font-mono">#${id}</span>
                     </div>
-                    <p class="text-sm text-gray-800 break-words font-medium mt-1">${m.mensaje || ''}</p>
+                    <p class="text-sm text-gray-800 break-words font-medium">${m.mensaje || ''}</p>
+
+                    ${m.respuesta ? `
+                        <div class="mt-3 p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs space-y-1">
+                            <div class="flex items-center justify-between font-bold text-amber-900">
+                                <span class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600"><polyline points="20 6 9 17 4 12"/></svg>
+                                    Respuesta enviada al cliente:
+                                </span>
+                                <span class="text-[11px] text-gray-400 font-normal">${fechaRespTxt}</span>
+                            </div>
+                            <p class="text-gray-700 leading-relaxed text-xs">${m.respuesta}</p>
+                        </div>
+                    ` : ''}
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
-                    ${!isAtendido ? `
+                <div class="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-100">
+                    <button onclick="openReplyModal(${id}, '${safeMensaje}', '${safeRespuesta}')"
+                        class="text-xs bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        ${m.respuesta ? 'Editar Respuesta' : 'Responder'}
+                    </button>
+                    ${(!isAtendido && !isRespondido) ? `
                         <button onclick="marcarAtendido(${id})"
-                            class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Atendido
+                            class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1">
+                            ✓ Marcar Atendido
                         </button>` : ''}
                     <button onclick="eliminarMensaje(${id})"
-                        class="text-xs border border-red-200 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition">
+                        class="text-xs border border-red-200 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition ml-auto">
                         Eliminar
                     </button>
                 </div>
@@ -602,6 +629,61 @@ async function cargarMensajesWeb(isBackground = false) {
     }).join('');
     lucide.createIcons();
 }
+
+window.openReplyModal = function (id, mensajeOriginal, respuestaActual = '') {
+    document.getElementById('reply-modal-title').textContent = `Responder Consulta #${id}`;
+    document.getElementById('reply-modal-original').textContent = `"${mensajeOriginal}"`;
+    document.getElementById('reply-modal-text').value = respuestaActual || '';
+
+    document.getElementById('reply-modal-send-btn').onclick = async () => {
+        const respuesta = document.getElementById('reply-modal-text').value.trim();
+        if (!respuesta) {
+            showToast('Por favor escribe una respuesta para el cliente.', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('reply-modal-send-btn');
+        btn.disabled = true;
+        btn.innerHTML = `<div class="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div> Enviando...`;
+
+        const { error } = await supabaseClient
+            .from('mensajes_web')
+            .update({
+                respuesta: respuesta,
+                estado: 'Respondido',
+                fecha_respuesta: new Date().toISOString()
+            })
+            .eq('idmensaje', id);
+
+        btn.disabled = false;
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar Respuesta`;
+
+        if (error) {
+            console.error('Error al responder mensaje:', error);
+            if (error.message && (error.message.includes('column') || error.message.includes('respuesta') || error.code === '42703')) {
+                showToast('Faltan columnas en Supabase. Ejecuta: ALTER TABLE mensajes_web ADD COLUMN IF NOT EXISTS respuesta TEXT; ALTER TABLE mensajes_web ADD COLUMN IF NOT EXISTS fecha_respuesta TIMESTAMP WITH TIME ZONE;', 'error');
+            } else {
+                showToast('Error al enviar respuesta: ' + error.message, 'error');
+            }
+            return;
+        }
+
+        showToast('¡Respuesta enviada con éxito! El cliente la verá en la web.', 'success');
+        closeReplyModal();
+        cargarMensajesWeb();
+    };
+
+    document.getElementById('reply-modal').classList.remove('hidden');
+    lucide.createIcons();
+};
+
+window.closeReplyModal = function () {
+    document.getElementById('reply-modal').classList.add('hidden');
+};
+
+window.handleReplyModalBackdrop = function (e) {
+    if (e.target === document.getElementById('reply-modal')) closeReplyModal();
+};
 
 window.marcarAtendido = async function (id) {
     const { error } = await supabaseClient
