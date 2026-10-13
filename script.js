@@ -527,6 +527,85 @@ let allWebMessages = [];
 let allConversationsMap = {};
 let chatSearchTerm = '';
 let chatEstadoFiltro = 'todos'; // 'todos' | 'no_abiertos' | 'abiertos' | 'atendidos'
+let _ultimoIdMensajeConocido = 0;
+let _sonidoHabilitado = true;
+let _tituloOriginalDashboard = document.title;
+let _flashTituloInterval = null;
+
+function reproducirSonidoNotificacion() {
+    if (!_sonidoHabilitado) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+
+        // Tono 1: Chime cálido inicial (Re 5 / 587 Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + 0.22);
+
+        // Tono 2: Chime brillante armónico (La 5 / 880 Hz)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
+        gain2.gain.setValueAtTime(0.24, ctx.currentTime + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + 0.08);
+        osc2.stop(ctx.currentTime + 0.55);
+    } catch (_) {}
+}
+
+function flashTituloPestana(textoAlerta) {
+    if (_flashTituloInterval) clearInterval(_flashTituloInterval);
+    let alternar = false;
+    let contador = 0;
+    _flashTituloInterval = setInterval(() => {
+        document.title = alternar ? textoAlerta : _tituloOriginalDashboard;
+        alternar = !alternar;
+        contador++;
+        if (contador > 14) {
+            clearInterval(_flashTituloInterval);
+            document.title = _tituloOriginalDashboard;
+        }
+    }, 750);
+}
+
+window.addEventListener('focus', () => {
+    if (_flashTituloInterval) {
+        clearInterval(_flashTituloInterval);
+        _flashTituloInterval = null;
+        document.title = _tituloOriginalDashboard;
+    }
+});
+
+window.toggleSonidoChat = function () {
+    _sonidoHabilitado = !_sonidoHabilitado;
+    const btn = document.getElementById('btn-sonido-chat');
+    if (btn) {
+        btn.innerHTML = _sonidoHabilitado 
+            ? '<i data-lucide="volume-2" class="w-4 h-4 text-amber-500"></i>' 
+            : '<i data-lucide="volume-x" class="w-4 h-4 text-gray-400"></i>';
+        btn.title = _sonidoHabilitado ? 'Sonido de notificaciones (Activado)' : 'Sonido de notificaciones (Silenciado)';
+        if (window.lucide) lucide.createIcons();
+    }
+    showToast(_sonidoHabilitado ? 'Sonido de notificaciones activado' : 'Sonido de notificaciones silenciado', 'info');
+    if (_sonidoHabilitado) {
+        reproducirSonidoNotificacion(); // Sonido de prueba
+    }
+};
 
 window.cambiarFiltroEstado = function (filtro) {
     chatEstadoFiltro = filtro;
@@ -610,6 +689,23 @@ async function cargarMensajesWeb(isBackground = false) {
     }
 
     allWebMessages = data || [];
+
+    // Alerta sonora y visual para nuevos mensajes de clientes en tiempo real
+    const maxIdActual = allWebMessages.reduce((max, m) => Math.max(max, m.idmensaje || 0), 0);
+    if (_ultimoIdMensajeConocido > 0 && maxIdActual > _ultimoIdMensajeConocido) {
+        const nuevosDelCliente = allWebMessages.filter(m => (m.idmensaje > _ultimoIdMensajeConocido) && (m.remitente !== 'asesor'));
+        if (nuevosDelCliente.length > 0) {
+            reproducirSonidoNotificacion();
+            const ultimo = nuevosDelCliente[nuevosDelCliente.length - 1];
+            const remitenteTxt = ultimo.cliente_nombre || 'Cliente Web';
+            showToast(`🔔 Nuevo mensaje de ${remitenteTxt}: "${(ultimo.mensaje || '').substring(0, 32)}..."`, 'info');
+            flashTituloPestana(`💬 (${nuevosDelCliente.length}) Nuevo Mensaje | MAQUIPESA`);
+        }
+    }
+    if (maxIdActual > _ultimoIdMensajeConocido) {
+        _ultimoIdMensajeConocido = maxIdActual;
+    }
+
     allConversationsMap = {};
 
     // Agrupar mensajes en hilos de conversación exclusivos por navegador/sesión
