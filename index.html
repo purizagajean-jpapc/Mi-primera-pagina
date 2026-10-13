@@ -215,12 +215,18 @@
         </form>
     </div>
 
-    <!-- SDKs de Firebase -->
+    <!-- SDKs de Supabase y Firebase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <script>
-        // Configuración de Firebase con credenciales de Maquipesa
+        // Supabase Client (Principal)
+        const SUPABASE_URL  = 'https://wfarydtyxqsvbkmevtwx.supabase.co';
+        const SUPABASE_ANON = 'sb_publishable_6955vcPni5-FAdtdwht8Gg_Xeb0qBtg';
+        const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+        // Firebase Client (Secundario/Respaldo)
         const firebaseConfig = {
             apiKey: "AIzaSyB8ZV-Hc2sao7IAMQLC76381Yp1RQn91nk",
             authDomain: "maquipesa-c48e8.firebaseapp.com",
@@ -232,10 +238,9 @@
             measurementId: "G-7YGLMED9XN"
         };
 
-        if (!firebase.apps.length) {
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
-        const database = firebase.database();
 
         lucide.createIcons();
 
@@ -253,7 +258,7 @@
         const formChat = document.getElementById('form-chat');
         const chatMensajes = document.getElementById('chat-mensajes');
 
-        formChat.addEventListener('submit', (e) => {
+        formChat.addEventListener('submit', async (e) => {
             e.preventDefault();
             const input = document.getElementById('chat-input');
             const mensajeUsuario = input.value.trim();
@@ -264,17 +269,37 @@
             msgUserDiv.className = 'bg-slate-900 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-sm';
             msgUserDiv.innerText = mensajeUsuario;
             chatMensajes.appendChild(msgUserDiv);
-
-            // Guardar en Firebase Database
-            database.ref('mensajes_clientes').push({
-                mensaje: mensajeUsuario,
-                fecha: new Date().toLocaleString(),
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                estado: 'Pendiente'
-            });
-
             input.value = '';
             chatMensajes.scrollTop = chatMensajes.scrollHeight;
+
+            // 1. Guardar en Supabase (Base de datos principal)
+            const { error: sbErr } = await sbClient.from('mensajes_web').insert([{
+                mensaje: mensajeUsuario,
+                estado: 'Pendiente'
+            }]);
+
+            // 2. Guardar también en Firebase de respaldo si está habilitado
+            try {
+                if (typeof firebase !== 'undefined' && firebase.database) {
+                    firebase.database().ref('mensajes_clientes').push({
+                        mensaje: mensajeUsuario,
+                        fecha: new Date().toLocaleString(),
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        estado: 'Pendiente'
+                    }).catch(() => {});
+                }
+            } catch (_) {}
+
+            // Si falló el envío principal
+            if (sbErr) {
+                console.error("Error al enviar mensaje:", sbErr);
+                const msgErrDiv = document.createElement('div');
+                msgErrDiv.className = 'bg-red-100 text-red-800 p-3 rounded-2xl text-xs font-semibold';
+                msgErrDiv.innerText = 'No se pudo enviar el mensaje. Por favor intenta nuevamente o contáctanos por teléfono.';
+                chatMensajes.appendChild(msgErrDiv);
+                chatMensajes.scrollTop = chatMensajes.scrollHeight;
+                return;
+            }
 
             // Respuesta automática al usuario
             setTimeout(() => {
@@ -283,7 +308,7 @@
                 msgBotDiv.innerText = '¡Gracias por escribirnos! Tu consulta ha sido registrada en nuestro sistema y un asesor se comunicará contigo a la brevedad.';
                 chatMensajes.appendChild(msgBotDiv);
                 chatMensajes.scrollTop = chatMensajes.scrollHeight;
-            }, 1000);
+            }, 800);
         });
     </script>
 </body>

@@ -421,8 +421,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'login.html';
     });
 
-    // Inicializar Firebase (mensajes)
-    initFirebase();
+    // Iniciar mensajes web y sincronización en tiempo real
+    initMensajesWeb();
 
     // Navegar a la primera sección
     cambiarSeccion('carroserias');
@@ -467,6 +467,7 @@ const LOADERS = {
     mantenimientos: () => cargarMantenimientos(),
     sedes:          () => cargarSedes(),
     finanzas:       () => cargarFinanzas(),
+    mensajes:       () => cargarMensajesWeb(),
 };
 
 window.cambiarSeccion = function (sec) {
@@ -490,88 +491,137 @@ window.cambiarSeccion = function (sec) {
     }
 
     // Cargar datos de la sección
-    if (sec !== 'mensajes') LOADERS[sec]?.();
+    LOADERS[sec]?.();
 };
 
 // ================================================================
-// FIREBASE — MENSAJES WEB EN TIEMPO REAL
+// MENSAJES WEB EN TIEMPO REAL (Supabase + Respaldo Firebase)
 // ================================================================
-function initFirebase() {
-    if (typeof firebase === 'undefined') return;
-    const db = firebase.database();
+let _mensajesWebInterval = null;
 
-    db.ref('mensajes_clientes').on('value', snapshot => {
-        const lista    = document.getElementById('lista-mensajes');
-        const contador = document.getElementById('contador-mensajes');
-        const badgeSb  = document.getElementById('badge-mensajes');
-        if (!lista) return;
+function initMensajesWeb() {
+    cargarMensajesWeb();
 
-        lista.innerHTML = '';
+    // 1. Suscripción en tiempo real con Supabase Realtime
+    try {
+        supabaseClient.channel('mensajes_web_channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes_web' }, () => {
+                cargarMensajesWeb(true);
+            })
+            .subscribe();
+    } catch (_) {}
 
-        if (!snapshot.exists()) {
-            lista.innerHTML = '<p class="text-gray-300 text-sm text-center py-8">No hay consultas pendientes.</p>';
-            if (contador) contador.textContent = '0 Mensajes';
-            badgeSb?.classList.add('hidden');
-            return;
+    // 2. Polling cada 6 segundos para garantizar actualización continua
+    if (!_mensajesWebInterval) {
+        _mensajesWebInterval = setInterval(() => {
+            cargarMensajesWeb(true);
+        }, 6000);
+    }
+}
+
+async function cargarMensajesWeb(isBackground = false) {
+    const lista    = document.getElementById('lista-mensajes');
+    const contador = document.getElementById('contador-mensajes');
+    const badgeSb  = document.getElementById('badge-mensajes');
+    if (!lista) return;
+
+    if (!isBackground && lista.children.length === 0) {
+        lista.innerHTML = `
+            <div class="flex items-center gap-3 text-gray-400 p-4">
+                <div class="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+                <p class="text-sm">Cargando consultas de clientes...</p>
+            </div>`;
+    }
+
+    const { data, error } = await supabaseClient
+        .from('mensajes_web')
+        .select('*')
+        .order('idmensaje', { ascending: false });
+
+    if (error) {
+        console.error("Error al cargar mensajes de Supabase:", error);
+        if (!isBackground) {
+            lista.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+                Error al conectar con la bandeja de mensajes: ${error.message}
+            </div>`;
         }
+        return;
+    }
 
-        let total = 0, pendientes = 0;
-        const items = [];
-        snapshot.forEach(c => { total++; items.push({ id: c.key, ...c.val() }); });
-        if (contador) contador.textContent = `${total} Mensajes`;
+    const items = data || [];
+    if (contador) contador.textContent = `${items.length} Mensajes`;
 
-        // Más recientes primero
-        [...items].reverse().forEach(({ id, mensaje, fecha, estado }) => {
-            if (estado !== 'Atendido') pendientes++;
-            const card = document.createElement('div');
-            card.className = 'bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-            card.innerHTML = `
+    const pendientes = items.filter(m => m.estado !== 'Atendido').length;
+    if (badgeSb) {
+        if (pendientes > 0) {
+            badgeSb.textContent = pendientes;
+            badgeSb.classList.remove('hidden');
+        } else {
+            badgeSb.classList.add('hidden');
+        }
+    }
+
+    if (items.length === 0) {
+        lista.innerHTML = '<p class="text-gray-300 text-sm text-center py-8">No hay consultas pendientes en este momento.</p>';
+        return;
+    }
+
+    lista.innerHTML = items.map(m => {
+        const id = m.idmensaje;
+        const estado = m.estado || 'Pendiente';
+        const isAtendido = estado === 'Atendido';
+        const fechaTxt = m.fecha ? new Date(m.fecha).toLocaleString('es-PE') : '';
+
+        return `
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition hover:shadow-sm">
                 <div class="space-y-1 flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border ${estado === 'Atendido'
+                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border ${isAtendido
                             ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
                             : 'bg-amber-100 text-amber-700 border-amber-200'}">
-                            ${estado || 'Pendiente'}
+                            ${estado}
                         </span>
-                        <span class="text-xs text-gray-400">${fecha || ''}</span>
+                        <span class="text-xs text-gray-400">${fechaTxt}</span>
+                        <span class="text-xs text-slate-300 font-mono">#${id}</span>
                     </div>
-                    <p class="text-sm text-gray-700 break-words">${mensaje || ''}</p>
+                    <p class="text-sm text-gray-800 break-words font-medium mt-1">${m.mensaje || ''}</p>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
-                    ${estado !== 'Atendido' ? `
-                        <button onclick="marcarAtendido('${id}')"
-                            class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg transition">
-                            ✓ Atendido
+                    ${!isAtendido ? `
+                        <button onclick="marcarAtendido(${id})"
+                            class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Atendido
                         </button>` : ''}
-                    <button onclick="eliminarMensaje('${id}')"
+                    <button onclick="eliminarMensaje(${id})"
                         class="text-xs border border-red-200 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition">
                         Eliminar
                     </button>
-                </div>`;
-            lista.appendChild(card);
-        });
-
-        // Badge en el sidebar
-        if (badgeSb) {
-            if (pendientes > 0) {
-                badgeSb.textContent = pendientes;
-                badgeSb.classList.remove('hidden');
-            } else {
-                badgeSb.classList.add('hidden');
-            }
-        }
-    });
+                </div>
+            </div>`;
+    }).join('');
+    lucide.createIcons();
 }
 
-window.marcarAtendido = function (id) {
-    firebase.database().ref('mensajes_clientes/' + id).update({ estado: 'Atendido' });
+window.marcarAtendido = async function (id) {
+    const { error } = await supabaseClient
+        .from('mensajes_web')
+        .update({ estado: 'Atendido' })
+        .eq('idmensaje', id);
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
     showToast('Mensaje marcado como atendido.', 'success');
+    cargarMensajesWeb();
 };
 
 window.eliminarMensaje = function (id) {
-    confirmarEliminar('Este mensaje será eliminado permanentemente.', () => {
-        firebase.database().ref('mensajes_clientes/' + id).remove();
+    confirmarEliminar('Este mensaje será eliminado permanentemente.', async () => {
+        const { error } = await supabaseClient
+            .from('mensajes_web')
+            .delete()
+            .eq('idmensaje', id);
+        if (error) { showToast('Error: ' + error.message, 'error'); return; }
         showToast('Mensaje eliminado.', 'info');
+        cargarMensajesWeb();
     });
 };
 
