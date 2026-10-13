@@ -739,7 +739,8 @@ async function cargarMensajesWeb(isBackground = false) {
                 id: m.idmensaje,
                 remitente: m.remitente,
                 texto: m.mensaje || '',
-                fecha: m.fecha
+                fecha: m.fecha,
+                estado: m.estado
             });
             conv.ultimoMensaje = m.mensaje || '';
             conv.ultimaFecha = m.fecha;
@@ -986,22 +987,25 @@ function renderizarThreadActivo() {
             </span>
         </div>
         ` + conv.mensajes.map(m => {
-            const isAsesor = m.remitente === 'asesor';
+            const isAsesor = m.remitente === 'asesor' || m.remitente === 'ia' || m.remitente === 'bot';
+            const esIA     = m.estado === 'Respondido por IA' || m.remitente === 'ia' || m.remitente === 'bot';
             const fechaTxt = m.fecha ? new Date(m.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             const safeTxt  = (m.texto || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
             if (isAsesor) {
-                // Mensaje del asesor (derecha - ámbar)
+                // Mensaje del asesor o IA (derecha - ámbar)
+                const etiqueta = esIA ? 'MaquiBot (IA)' : 'Tú (Asesor)';
+                const badgeAvatar = esIA ? '🤖' : 'A';
                 return `
                     <div class="flex items-start justify-end gap-2.5 max-w-[85%] ml-auto group">
                         <div class="flex flex-col items-end">
                             <div class="bg-amber-500 text-slate-950 font-medium rounded-2xl rounded-tr-none px-4 py-2.5 shadow-sm text-sm break-words leading-relaxed">
                                 ${safeTxt}
                             </div>
-                            <span class="text-[10px] text-gray-400 mt-1 mr-1">${fechaTxt} • Tú (Asesor)</span>
+                            <span class="text-[10px] text-gray-400 mt-1 mr-1">${fechaTxt} • ${etiqueta}</span>
                         </div>
                         <div class="w-7 h-7 rounded-full bg-slate-900 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 shadow-sm">
-                            A
+                            ${badgeAvatar}
                         </div>
                     </div>`;
             } else {

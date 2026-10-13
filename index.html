@@ -468,15 +468,16 @@
                     }
                 }
 
-                // 2. Respuesta del asesor exclusiva para este navegador
-                if (item.remitente === 'asesor' || item.respuesta) {
+                // 2. Respuesta del asesor o IA exclusiva para este navegador
+                if (item.remitente === 'asesor' || item.remitente === 'ia' || item.remitente === 'bot' || item.respuesta) {
                     const idKey = 'ase_' + idMsg;
                     if (!mensajesRenderizadosIds.has(idKey)) {
                         mensajesRenderizadosIds.add(idKey);
                         huboNuevosDelAsesor = true;
-                        const textoResp = item.remitente === 'asesor' ? item.mensaje : item.respuesta;
+                        const textoResp = (item.remitente === 'asesor' || item.remitente === 'ia' || item.remitente === 'bot') ? item.mensaje : item.respuesta;
                         const fechaResp = item.fecha_respuesta || item.fecha;
-                        renderizarBurbujaAsesor(textoResp, fechaResp);
+                        const esIA = item.estado === 'Respondido por IA' || item.remitente === 'ia' || item.remitente === 'bot';
+                        renderizarBurbujaAsesor(textoResp, fechaResp, esIA);
                     }
                 }
             });
@@ -496,15 +497,22 @@
             esPrimeraCarga = false;
         }
 
-        function renderizarBurbujaAsesor(texto, fechaIso) {
+        function renderizarBurbujaAsesor(texto, fechaIso, esIA = false) {
             const hora = fechaIso ? new Date(fechaIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             const div = document.createElement('div');
             div.className = 'bg-amber-500 text-slate-950 p-3.5 rounded-2xl rounded-tl-none max-w-[88%] text-sm font-medium shadow-md space-y-1.5 transition animate-pulse-once';
+            
+            const badgeIA = esIA 
+                ? `<span class="bg-slate-950/20 text-slate-950 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">IA</span>` 
+                : '';
+            const nombreRemitente = esIA ? 'MaquiBot · Asesor Virtual' : 'Asesor Comercial';
+
             div.innerHTML = `
                 <div class="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-slate-900">
                     <span class="flex items-center gap-1.5">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                        Asesor Maquipesa
+                        <span>${nombreRemitente}</span>
+                        ${badgeIA}
                     </span>
                     <span class="text-slate-800 text-[10px] font-normal">${hora}</span>
                 </div>
