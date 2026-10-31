@@ -1152,12 +1152,15 @@
     // CARROCERÍAS
     // ================================================================
     async function cargarCarrosas() {
-        setLoading('tabla-carrosas', 6);
-        const { data, error } = await supabaseClient.from('carroceria').select('*');
-        if (error) { showToast('Error al cargar carrocerías: ' + error.message, 'error'); return; }
-        tState.carroserias.data = sortByPK(data || [], 'carroceria');
-        tState.carroserias.page = 1;
-        renderCarrosas();
+    setLoading('tabla-carrosas', 7);
+    cargarSelectCarros(); // <-- Carga los carros en el select
+    const { data, error } = await supabaseClient
+        .from('carroceria')
+        .select('*, carro(idcarro, placa, modelo)'); // Traemos la relación con carro
+    if (error) { showToast('Error al cargar carrocerías: ' + error.message, 'error'); return; }
+    tState.carroserias.data = sortByPK(data || [], 'carroceria');
+    tState.carroserias.page = 1;
+    renderCarrosas();
     }
 
     function renderCarrosas() {
@@ -1279,38 +1282,48 @@
     // ================================================================
     async function cargarEmpleados() {
         setLoading('tabla-empleados', 6);
-        const { data, error } = await supabaseClient
-            .from('empleado')
-            .select('idempleado, cargo, sueldobase, horassemanales, idpersona, persona(idpersona, nombrelegal, apellidopaterno, apellidomaterno, documento, pais, ciudad, direccion, fechadenacimiento)');
-        if (error) { showToast('Error al cargar empleados: ' + error.message, 'error'); return; }
+    const { data, error } = await supabaseClient
+        .from('empleado')
+        .select('idempleado, cargo, sueldobase, horassemanales, estado, idpersona, persona(idpersona, nombrelegal, apellidopaterno, apellidomaterno, documento, pais, ciudad, direccion, fechadenacimiento)');
+    if (error) { showToast('Error al cargar empleados: ' + error.message, 'error'); return; }
 
-        // Aplanar datos de persona para facilitar búsqueda y renderizado
-        tState.empleados.data = (data || []).map(e => ({
-            ...e,
-            nombreCompleto: `${e.persona?.nombrelegal ?? ''} ${e.persona?.apellidopaterno ?? ''} ${e.persona?.apellidomaterno ?? ''}`.trim(),
-            documento:      e.persona?.documento ?? '',
-        })).sort((a, b) => (b.idempleado ?? 0) - (a.idempleado ?? 0));
-        tState.empleados.page = 1;
-        renderEmpleados();
+    tState.empleados.data = (data || []).map(e => ({
+        ...e,
+        nombreCompleto: `${e.persona?.nombrelegal ?? ''} ${e.persona?.apellidopaterno ?? ''} ${e.persona?.apellidomaterno ?? ''}`.trim(),
+        documento:      e.persona?.documento ?? '',
+    })).sort((a, b) => (b.idempleado ?? 0) - (a.idempleado ?? 0));
+    tState.empleados.page = 1;
+    renderEmpleados();
+    }
+
+    function badgeEmpleado(estado) {
+    const map = {
+        'Contratado': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        'Retirado':   'bg-amber-100 text-amber-800 border-amber-200',
+        'Despedido':  'bg-rose-100 text-rose-800 border-rose-200',
+        };
+        const cls = map[estado] || 'bg-gray-100 text-gray-600 border-gray-200';
+        return `<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${cls}">${estado ?? 'Contratado'}</span>`;
     }
 
     function renderEmpleados() {
         renderPag('empleados', rows => {
-            const tb = document.getElementById('tabla-empleados');
-            if (!tb) return;
-            if (!rows.length) {
-                tb.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-sm text-gray-300">Sin empleados registrados.</td></tr>';
-                return;
-            }
-            tb.innerHTML = rows.map(item => `
-                <tr class="border-b border-gray-50 hover:bg-amber-50/40 transition">
-                    <td class="px-4 py-3 text-xs text-gray-300 font-bold">#${item.idempleado ?? ''}</td>
-                    <td class="px-4 py-3 font-medium text-gray-800">${item.nombreCompleto || '-'}</td>
-                    <td class="px-4 py-3 text-gray-500 text-xs">${item.documento || '-'}</td>
-                    <td class="px-4 py-3 text-gray-700">${item.cargo ?? '-'}</td>
-                    <td class="px-4 py-3 font-semibold text-emerald-600">S/ ${(parseFloat(item.sueldobase) || 0).toFixed(2)}</td>
-                    <td class="px-4 py-3">${actionBtns(`editarEmpleado(${item.idempleado})`, `eliminarEmpleado(${item.idempleado})`)}</td>
-                </tr>`).join('');
+        const tb = document.getElementById('tabla-empleados');
+        if (!tb) return;
+        if (!rows.length) {
+            tb.innerHTML = '<tr><td colspan="6" class="py-10 text-center text-sm text-gray-300">Sin empleados registrados.</td></tr>';
+            return;
+        }
+        tb.innerHTML = rows.map(item => `
+            <tr class="border-b border-gray-50 hover:bg-amber-50/40 transition">
+                <td class="px-4 py-3 text-xs text-gray-300 font-bold">#${item.idempleado ?? ''}</td>
+                <td class="px-4 py-3 font-medium text-gray-800">${item.nombreCompleto || '-'}</td>
+                <td class="px-4 py-3 text-gray-500 text-xs">${item.documento || '-'}</td>
+                <td class="px-4 py-3 text-gray-700">${item.cargo ?? '-'}</td>
+                <td class="px-4 py-3">${badgeEmpleado(item.estado)}</td>
+                <td class="px-4 py-3 font-semibold text-emerald-600">S/ ${(parseFloat(item.sueldobase) || 0).toFixed(2)}</td>
+                <td class="px-4 py-3">${actionBtns(`editarEmpleado(${item.idempleado})`, `eliminarEmpleado(${item.idempleado})`)}</td>
+            </tr>`).join('');
         });
     }
 
@@ -1526,6 +1539,15 @@
         tState.carros.data = sortByPK(data || [], 'carro');
         tState.carros.page = 1;
         renderCarros();
+    }
+
+    async function cargarSelectCarros() {
+    const sel = document.getElementById('car-idcarro');
+    if (!sel) return;
+    const { data, error } = await supabaseClient.from('carro').select('idcarro, placa, modelo');
+    if (error) return;
+    sel.innerHTML = '<option value="">-- Sin Vehículo Asignado --</option>' +
+        (data || []).map(c => `<option value="${c.idcarro}">Placa: ${c.placa} (${c.modelo || 'Sin modelo'})</option>`).join('');
     }
 
     function renderCarros() {
@@ -1942,20 +1964,24 @@
 
         // ── Carrocería ─────────────────────────────────────────────
         document.getElementById('form-carrosa')?.addEventListener('submit', async e => {
-            e.preventDefault();
-            const { error } = await supabaseClient.from('carroceria').insert([{
-                modelocarrosa: document.getElementById('car-modelo').value,
-                altura: parseFloat(document.getElementById('car-altura').value),
-                ancho:  parseFloat(document.getElementById('car-ancho').value),
-                largo:  parseFloat(document.getElementById('car-largo').value),
-                color:  document.getElementById('car-color').value,
-                estado: document.getElementById('car-estado').value,
-            }]);
-            if (error) { showToast('Error: ' + error.message, 'error'); return; }
-            showToast('¡Carrocería registrada exitosamente!', 'success');
-            e.target.reset();
-            cargarCarrosas();
-        });
+    e.preventDefault();
+    const idCarroVal = document.getElementById('car-idcarro').value;
+    
+    const { error } = await supabaseClient.from('carroceria').insert([{
+        modelocarrosa: document.getElementById('car-modelo').value,
+        altura:        parseFloat(document.getElementById('car-altura').value),
+        ancho:         parseFloat(document.getElementById('car-ancho').value),
+        largo:         parseFloat(document.getElementById('car-largo').value),
+        color:         document.getElementById('car-color').value,
+        estado:        document.getElementById('car-estado').value,
+        idcarro:       idCarroVal ? parseInt(idCarroVal) : null, // Vincula la placa seleccionada
+    }]);
+
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    showToast('¡Carrocería registrada y vinculada exitosamente!', 'success');
+    e.target.reset();
+    cargarCarrosas();
+});
 
         // ── Vehículo / Carro ───────────────────────────────────────
         document.getElementById('form-carro')?.addEventListener('submit', async e => {
@@ -2124,42 +2150,39 @@
 
         // ── Empleado (Con Sueldo y Horas Ordinarias) ─────────────
         document.getElementById('form-empleado')?.addEventListener('submit', async e => {
-            e.preventDefault();
+        e.preventDefault();
 
-            // 1. Capturar Sueldo y Horas
-            const sueldoBase = parseFloat(document.getElementById('emp-sueldo').value) || 0;
-            const horasOrdinarias = parseInt(document.getElementById('emp-horas').value) || 160;
+        const sueldoBase = parseFloat(document.getElementById('emp-sueldo').value) || 0;
+        const horasOrdinarias = parseInt(document.getElementById('emp-horas').value) || 160;
+        const estadoLaboral = document.getElementById('emp-estado').value;
 
-            const { data: personaData, error: pErr } = await supabaseClient
-                .from('persona')
-                .insert([{
-                    documento:         document.getElementById('per-documento').value,
-                    nombrelegal:       document.getElementById('per-nombre').value,
-                    apellidopaterno:   document.getElementById('per-paterno').value,
-                    apellidomaterno:   document.getElementById('per-materno').value,
-                    fechadenacimiento: document.getElementById('per-nacimiento').value,
-                    pais:              document.getElementById('per-pais').value,
-                    ciudad:            document.getElementById('per-ciudad').value,
-                    direccion:         document.getElementById('per-direccion').value,
-                }])
-                .select();
-            if (pErr) { showToast('Error guardando persona: ' + pErr.message, 'error'); return; }
+        const { data: personaData, error: pErr } = await supabaseClient.from('persona').insert([{
+            documento:         document.getElementById('per-documento').value,
+            nombrelegal:       document.getElementById('per-nombre').value,
+            apellidopaterno:   document.getElementById('per-paterno').value,
+            apellidomaterno:   document.getElementById('per-materno').value,
+            fechadenacimiento: document.getElementById('per-nacimiento').value,
+            pais:              document.getElementById('per-pais').value,
+            ciudad:            document.getElementById('per-ciudad').value,
+            direccion:         document.getElementById('per-direccion').value,
+        }]).select();
 
-            // 2. Insertar en tabla empleado con sueldo y horas
-            const { error: eErr } = await supabaseClient.from('empleado').insert([{
-                cargo:          document.getElementById('emp-cargo').value,
-                idpersona:      personaData[0].idpersona,
-                sueldobase:     sueldoBase,
-                horassemanales: horasOrdinarias
-            }]);
-            if (eErr) { showToast('Error guardando empleado: ' + eErr.message, 'error'); return; }
+    if (pErr) { showToast('Error guardando persona: ' + pErr.message, 'error'); return; }
 
-            showToast('¡Empleado registrado exitosamente con su sueldo!', 'success');
-            e.target.reset();
-            document.getElementById('per-pais').value = 'Perú';
-            document.getElementById('emp-horas').value = '160';
-            cargarEmpleados();
-        });
+    const { error: eErr } = await supabaseClient.from('empleado').insert([{
+        cargo:          document.getElementById('emp-cargo').value,
+        idpersona:      personaData[0].idpersona,
+        sueldobase:     sueldoBase,
+        horassemanales: horasOrdinarias,
+        estado:         estadoLaboral // Guardamos el estado seleccionado
+    }]);
+
+    if (eErr) { showToast('Error guardando empleado: ' + eErr.message, 'error'); return; }
+
+    showToast('¡Empleado registrado con éxito!', 'success');
+    e.target.reset();
+    cargarEmpleados();
+});
 
         // ── Finanzas / Gastos ──────────────────────────────────────
         document.getElementById('form-finanza')?.addEventListener('submit', async e => {
