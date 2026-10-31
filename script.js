@@ -1149,18 +1149,42 @@
     }
 
     // ================================================================
-    // CARROCERÍAS
+    // CARROCERÍAS (Con carga automática del selector de vehículos)
     // ================================================================
     async function cargarCarrosas() {
-    setLoading('tabla-carrosas', 7);
-    cargarSelectCarros(); // <-- Carga los carros en el select
-    const { data, error } = await supabaseClient
-        .from('carroceria')
-        .select('*, carro(idcarro, placa, modelo)'); // Traemos la relación con carro
-    if (error) { showToast('Error al cargar carrocerías: ' + error.message, 'error'); return; }
-    tState.carroserias.data = sortByPK(data || [], 'carroceria');
-    tState.carroserias.page = 1;
-    renderCarrosas();
+        setLoading('tabla-carrosas', 7);
+        await cargarSelectCarros(); // <-- ESTA LÍNEA CARGA LOS VEHÍCULOS EN EL SELECT
+
+        const { data, error } = await supabaseClient
+            .from('carroceria')
+            .select('*, carro(idcarro, placa, modelo)');
+
+        if (error) { 
+            showToast('Error al cargar carrocerías: ' + error.message, 'error'); 
+            return; 
+        }
+
+        tState.carroserias.data = sortByPK(data || [], 'carroceria');
+        tState.carroserias.page = 1;
+        renderCarrosas();
+    }
+
+    async function cargarSelectCarros() {
+        const sel = document.getElementById('car-idcarro');
+        if (!sel) return;
+        
+        // Consultamos los vehículos incluyendo la relación con clientes
+        const { data, error } = await supabaseClient
+            .from('carro')
+            .select('idcarro, placa, modelo, cliente(razonsocial)');
+            
+        if (error) return;
+
+        sel.innerHTML = '<option value="">-- Sin Vehículo Asignado --</option>' +
+            (data || []).map(c => {
+                const nombreCliente = c.cliente?.razonsocial || 'Sin Cliente Asignado';
+                return `<option value="${c.idcarro}">Cliente: ${nombreCliente} (Placa: ${c.placa})</option>`;
+            }).join('');
     }
 
     function renderCarrosas() {
@@ -1510,44 +1534,38 @@
     };
 
     // ================================================================
-    // MAPA DE RENDERS (para paginación dinámica)
-    // ================================================================
-    const RENDER_MAP = {
-        carroserias:    renderCarrosas,
-        carros:         renderCarros,
-        productos:      renderProductos,
-        clientes:       renderClientes,
-        proveedores:    renderProveedores,
-        empleados:      renderEmpleados,
-        equipos:        renderEquipos,
-        mantenimientos: renderMantenimientos,
-        sedes:          renderSedes,
-        finanzas:       renderFinanzas,
-    };
-
-    // ================================================================
-    // VEHÍCULOS / CARROS (Tabla carro)
+    // VEHÍCULOS / CARROS (Con cruce seguro de clientes)
     // ================================================================
     async function cargarCarros() {
         setLoading('tabla-carros', 8);
-        // Cargar select de clientes para el form de carro
-        cargarSelectClientes();
-        const { data, error } = await supabaseClient
-            .from('carro')
-            .select('*, cliente(idcliente, razonsocial)');
-        if (error) { showToast('Error al cargar vehículos: ' + error.message, 'error'); return; }
-        tState.carros.data = sortByPK(data || [], 'carro');
+        await cargarSelectClientes();
+
+        // 1. Cargamos los vehículos y los clientes en paralelo para asegurar datos
+        const [resCarros, resClientes] = await Promise.all([
+            supabaseClient.from('carro').select('*'),
+            supabaseClient.from('cliente').select('idcliente, razonsocial')
+        ]);
+
+        if (resCarros.error) { 
+            showToast('Error al cargar vehículos: ' + resCarros.error.message, 'error'); 
+            return; 
+        }
+
+        // 2. Creamos un mapa de clientes por su ID para buscarlos al instante
+        const clientesMap = {};
+        (resClientes.data || []).forEach(c => {
+            clientesMap[c.idcliente] = c.razonsocial;
+        });
+
+        // 3. Cruzamos el nombre del cliente directamente con el idcliente del carro
+        const carrosConCliente = (resCarros.data || []).map(carro => ({
+            ...carro,
+            nombreCliente: clientesMap[carro.idcliente] || carro.cliente?.razonsocial || 'Sin Asignar'
+        }));
+
+        tState.carros.data = sortByPK(carrosConCliente, 'carro');
         tState.carros.page = 1;
         renderCarros();
-    }
-
-    async function cargarSelectCarros() {
-    const sel = document.getElementById('car-idcarro');
-    if (!sel) return;
-    const { data, error } = await supabaseClient.from('carro').select('idcarro, placa, modelo');
-    if (error) return;
-    sel.innerHTML = '<option value="">-- Sin Vehículo Asignado --</option>' +
-        (data || []).map(c => `<option value="${c.idcarro}">Placa: ${c.placa} (${c.modelo || 'Sin modelo'})</option>`).join('');
     }
 
     function renderCarros() {
@@ -1561,7 +1579,7 @@
             tb.innerHTML = rows.map(item => {
                 const pk = getPK(item, 'carro');
                 const id = pk?.value ?? '';
-                const clienteName = item.cliente?.razonsocial || 'Sin Asignar';
+                
                 return `<tr class="border-b border-gray-50 hover:bg-amber-50/40 transition">
                     <td class="px-4 py-3 text-xs text-gray-300 font-bold">#${id}</td>
                     <td class="px-4 py-3 font-bold text-gray-800">${item.placa ?? '-'}</td>
@@ -1569,7 +1587,7 @@
                     <td class="px-4 py-3 text-xs text-gray-500">${item.categoria ?? '-'}</td>
                     <td class="px-4 py-3 text-gray-600">${item.color ?? '-'}</td>
                     <td class="px-4 py-3 text-xs text-gray-400">${item.aniofabricacion ?? '-'}/${item.aniomodelo ?? '-'}</td>
-                    <td class="px-4 py-3 text-xs font-semibold text-slate-700">${clienteName}</td>
+                    <td class="px-4 py-3 text-xs font-semibold text-slate-700">${item.nombreCliente}</td>
                     <td class="px-4 py-3">${actionBtns(`editarCarro(${id})`, `eliminarCarro('${pk?.key}', ${id})`)}</td>
                 </tr>`;
             }).join('');
@@ -1899,6 +1917,59 @@
         renderFinanzas();
     }
 
+    // ================================================================
+// FUNCIÓN DINÁMICA PARA FINANZAS Y GASTOS
+// ================================================================
+async function cambiarTipoMovimientoFinanza(tipo) {
+    const contenedorExtra = document.getElementById('finanza-campo-extra');
+    const labelExtra = document.getElementById('fin-extra-label');
+    const selectExtra = document.getElementById('fin-extra-select');
+
+    if (!contenedorExtra) return;
+
+    // Si es gasto operativo de sede, ocultamos el campo extra y quitamos la obligación
+    if (tipo === 'gasto') {
+        contenedorExtra.classList.add('hidden');
+        if (selectExtra) selectExtra.removeAttribute('required');
+        return;
+    }
+
+    // Para los demás tipos, mostramos el contenedor extra y lo hacemos obligatorio
+    contenedorExtra.classList.remove('hidden');
+    if (selectExtra) selectExtra.setAttribute('required', 'true');
+
+    if (tipo === 'pagocliente') {
+        if (labelExtra) labelExtra.textContent = 'Seleccionar Cliente *';
+        const { data, error } = await supabaseClient.from('cliente').select('idcliente, razonsocial');
+        if (error) console.error("Error al cargar clientes:", error);
+        if (selectExtra) {
+            selectExtra.innerHTML = '<option value="">-- Seleccionar Cliente --</option>' +
+                (data || []).map(c => `<option value="${c.idcliente}">${c.razonsocial}</option>`).join('');
+        }
+    } else if (tipo === 'pagoproveedor') {
+        if (labelExtra) labelExtra.textContent = 'Seleccionar Proveedor *';
+        const { data, error } = await supabaseClient.from('proveedor').select('idproveedor, razonsocial');
+        if (error) console.error("Error al cargar proveedores:", error);
+        if (selectExtra) {
+            selectExtra.innerHTML = '<option value="">-- Seleccionar Proveedor --</option>' +
+                (data || []).map(p => `<option value="${p.idproveedor}">${p.razonsocial}</option>`).join('');
+        }
+    } else if (tipo === 'pagoempleado') {
+        if (labelExtra) labelExtra.textContent = 'Seleccionar Empleado *';
+        const { data, error } = await supabaseClient
+            .from('empleado')
+            .select('idempleado, persona(nombrelegal, apellidopaterno)');
+        if (error) console.error("Error al cargar empleados:", error);
+        if (selectExtra) {
+            selectExtra.innerHTML = '<option value="">-- Seleccionar Empleado --</option>' +
+                (data || []).map(e => {
+                    const nombreCompleto = `${e.persona?.nombrelegal ?? ''} ${e.persona?.apellidopaterno ?? ''}`.trim();
+                    return `<option value="${e.idempleado}">${nombreCompleto || 'Empleado #' + e.idempleado}</option>`;
+                }).join('');
+        }
+    }
+}
+
     function renderFinanzas() {
         renderPag('finanzas', rows => {
             const tb = document.getElementById('tabla-finanzas');
@@ -2186,55 +2257,59 @@
 
         // ── Finanzas / Gastos ──────────────────────────────────────
         document.getElementById('form-finanza')?.addEventListener('submit', async e => {
-            e.preventDefault();
-            const tipoMv    = document.getElementById('fin-tipo').value;
-            const monto     = parseFloat(document.getElementById('fin-monto').value);
-            const metodo    = document.getElementById('fin-metodo').value;
-            const operacion = document.getElementById('fin-operacion').value;
-            const fecha     = document.getElementById('fin-fecha').value;
-            const idSedeVal = document.getElementById('fin-sede').value;
+    e.preventDefault();
+    const tipoMv    = document.getElementById('fin-tipo').value;
+    const monto     = parseFloat(document.getElementById('fin-monto').value);
+    const metodo    = document.getElementById('fin-metodo').value;
+    const operacion = document.getElementById('fin-operacion').value;
+    const fecha     = document.getElementById('fin-fecha').value;
+    const idSedeVal = document.getElementById('fin-sede').value;
+    const extraVal  = document.getElementById('fin-extra-select')?.value;
 
-            let err = null;
-            if (tipoMv === 'gasto') {
-                const { error } = await supabaseClient.from('gasto').insert([{
-                    fechagasto:      fecha,
-                    montopengasto:   monto,
-                    metodogasto:     metodo,
-                    numerooperacion: operacion,
-                    idsede:          idSedeVal ? parseInt(idSedeVal) : null,
-                }]);
-                err = error;
-            } else if (tipoMv === 'pagocliente') {
-                const { error } = await supabaseClient.from('pagocliente').insert([{
-                    fechapago:       new Date(fecha).toISOString(),
-                    montopen:        monto,
-                    metodopago:      metodo,
-                    numerooperacion: operacion,
-                }]);
-                err = error;
-            } else if (tipoMv === 'pagoproveedor') {
-                const { error } = await supabaseClient.from('pagoproveedor').insert([{
-                    fechapago:       new Date(fecha).toISOString(),
-                    montopen:        monto,
-                    metodopago:      metodo,
-                    numerooperacion: operacion,
-                }]);
-                err = error;
-            } else if (tipoMv === 'pagoempleado') {
-                const { error } = await supabaseClient.from('pagoempleado').insert([{
-                    fechapago:       new Date(fecha).toISOString(),
-                    montopen:        monto,
-                    metodopago:      metodo,
-                    numerooperacion: operacion,
-                    idempleado:      tState.empleados.data[0]?.idempleado || 1,
-                }]);
-                err = error;
-            }
+    let err = null;
+    if (tipoMv === 'gasto') {
+        const { error } = await supabaseClient.from('gasto').insert([{
+            fechagasto:      fecha,
+            montopengasto:   monto,
+            metodogasto:     metodo,
+            numerooperacion: operacion,
+            idsede:          idSedeVal ? parseInt(idSedeVal) : null,
+        }]);
+        err = error;
+    } else if (tipoMv === 'pagocliente') {
+        const { error } = await supabaseClient.from('pagocliente').insert([{
+            fechapago:       new Date(fecha).toISOString(),
+            montopen:        monto,
+            metodopago:      metodo,
+            numerooperacion: operacion,
+            idcliente:       extraVal ? parseInt(extraVal) : null, // Guarda el ID del cliente
+        }]);
+        err = error;
+    } else if (tipoMv === 'pagoproveedor') {
+        const { error } = await supabaseClient.from('pagoproveedor').insert([{
+            fechapago:       new Date(fecha).toISOString(),
+            montopen:        monto,
+            metodopago:      metodo,
+            numerooperacion: operacion,
+            idproveedor:     extraVal ? parseInt(extraVal) : null, // Guarda el ID del proveedor
+        }]);
+        err = error;
+    } else if (tipoMv === 'pagoempleado') {
+        const { error } = await supabaseClient.from('pagoempleado').insert([{
+            fechapago:       new Date(fecha).toISOString(),
+            montopen:        monto,
+            metodopago:      metodo,
+            numerooperacion: operacion,
+            idempleado:      extraVal ? parseInt(extraVal) : null, // Guarda el ID del empleado
+        }]);
+        err = error;
+    }
 
-            if (err) { showToast('Error registrando movimiento: ' + err.message, 'error'); return; }
-            showToast('¡Movimiento financiero registrado!', 'success');
-            e.target.reset();
-            document.getElementById('fin-fecha').value = new Date().toISOString().split('T')[0];
-            cargarFinanzas();
-        });
+    if (err) { showToast('Error registrando movimiento: ' + err.message, 'error'); return; }
+    showToast('¡Movimiento financiero registrado!', 'success');
+    e.target.reset();
+    document.getElementById('fin-fecha').value = new Date().toISOString().split('T')[0];
+    cambiarTipoMovimientoFinanza('gasto');
+    cargarFinanzas();
+});
     }
