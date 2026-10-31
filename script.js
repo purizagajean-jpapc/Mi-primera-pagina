@@ -1633,12 +1633,32 @@
     // PRODUCTOS CON ESPECIALIZACIÓN (Plancha y Tubo)
     // ================================================================
     window.toggleSubtipoFields = function(subtipo) {
-        const fPlancha = document.getElementById('fields-plancha');
-        const fTubo    = document.getElementById('fields-tubo');
-        if (fPlancha) fPlancha.classList.toggle('hidden', subtipo !== 'plancha');
-        if (fTubo)    fTubo.classList.toggle('hidden', subtipo !== 'tubo');
-    };
-
+    const fPlancha = document.getElementById('fields-plancha');
+    const fTubo    = document.getElementById('fields-tubo');
+    
+    if (fPlancha) {
+        fPlancha.classList.toggle('hidden', subtipo !== 'plancha');
+        fPlancha.querySelectorAll('input').forEach(i => {
+            subtipo === 'plancha' ? i.setAttribute('required', 'true') : i.removeAttribute('required');
+        });
+    }
+    if (fTubo) {
+        fTubo.classList.toggle('hidden', subtipo !== 'tubo');
+        fTubo.querySelectorAll('input').forEach(i => {
+            subtipo === 'tubo' ? i.setAttribute('required', 'true') : i.removeAttribute('required');
+        });
+    }
+};
+window.detectarEspecialidadMaterial = function(valor) {
+    const v = valor.toLowerCase();
+    if (v.includes('plancha')) {
+        toggleSubtipoFields('plancha');
+    } else if (v.includes('tubo') || v.includes('perfil')) {
+        toggleSubtipoFields('tubo');
+    } else {
+        toggleSubtipoFields('general');
+    }
+};
     async function cargarSelectSedes() {
         const selects = [document.getElementById('prod-idsede'), document.getElementById('fin-sede')];
         const { data } = await supabaseClient.from('sede').select('idsede, nombresede');
